@@ -6,6 +6,10 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
+    interface DiscoHyperlink {
+    }
+    interface DiscoRoom {
+    }
     interface MyComponent {
         /**
           * The first name
@@ -22,6 +26,18 @@ export namespace Components {
     }
 }
 declare global {
+    interface HTMLDiscoHyperlinkElement extends Components.DiscoHyperlink, HTMLStencilElement {
+    }
+    var HTMLDiscoHyperlinkElement: {
+        prototype: HTMLDiscoHyperlinkElement;
+        new (): HTMLDiscoHyperlinkElement;
+    };
+    interface HTMLDiscoRoomElement extends Components.DiscoRoom, HTMLStencilElement {
+    }
+    var HTMLDiscoRoomElement: {
+        prototype: HTMLDiscoRoomElement;
+        new (): HTMLDiscoRoomElement;
+    };
     interface HTMLMyComponentElement extends Components.MyComponent, HTMLStencilElement {
     }
     var HTMLMyComponentElement: {
@@ -29,10 +45,16 @@ declare global {
         new (): HTMLMyComponentElement;
     };
     interface HTMLElementTagNameMap {
+        "disco-hyperlink": HTMLDiscoHyperlinkElement;
+        "disco-room": HTMLDiscoRoomElement;
         "my-component": HTMLMyComponentElement;
     }
 }
 declare namespace LocalJSX {
+    interface DiscoHyperlink {
+    }
+    interface DiscoRoom {
+    }
     interface MyComponent {
         /**
           * The first name
@@ -48,6 +70,8 @@ declare namespace LocalJSX {
         "middle"?: string;
     }
     interface IntrinsicElements {
+        "disco-hyperlink": DiscoHyperlink;
+        "disco-room": DiscoRoom;
         "my-component": MyComponent;
     }
 }
@@ -55,6 +79,8 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            "disco-hyperlink": LocalJSX.DiscoHyperlink & JSXBase.HTMLAttributes<HTMLDiscoHyperlinkElement>;
+            "disco-room": LocalJSX.DiscoRoom & JSXBase.HTMLAttributes<HTMLDiscoRoomElement>;
             "my-component": LocalJSX.MyComponent & JSXBase.HTMLAttributes<HTMLMyComponentElement>;
         }
     }

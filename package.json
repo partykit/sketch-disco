@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@stencil/core": "^4.0.0",
+    "object-hash": "^3.0.0",
     "partykit": "^0.0.0-df5c577",
     "partysocket": "^0.0.0-df5c577"
   },
@@ -34,6 +35,7 @@
     "@stencil/sass": "^3.0.5",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.18.11",
+    "@types/object-hash": "^3.0.3",
     "jest": "^27.5.1",
     "jest-cli": "^27.5.1",
     "puppeteer": "^21.0.3",
