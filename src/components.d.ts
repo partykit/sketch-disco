@@ -9,6 +9,7 @@ export namespace Components {
     interface DiscoHyperlink {
     }
     interface DiscoRoom {
+        "host": string;
     }
     interface MyComponent {
         /**
@@ -54,6 +55,7 @@ declare namespace LocalJSX {
     interface DiscoHyperlink {
     }
     interface DiscoRoom {
+        "host"?: string;
     }
     interface MyComponent {
         /**

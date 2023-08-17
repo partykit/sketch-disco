@@ -46,7 +46,11 @@ export default {
       // Store the connection count for this room
       const rc = ((await room.storage.get("roomConnections")) ||
         {}) as RoomConnections;
-      rc[roomId] = connections;
+      if (connections === 0) {
+        delete rc[roomId];
+      } else {
+        rc[roomId] = connections;
+      }
       await room.storage.put("roomConnections", rc);
       // Send the update to all subscribers
       Array.from(room.connections).forEach(([_, subscriberWebsocket]) => {
