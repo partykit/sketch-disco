@@ -1,4 +1,13 @@
-import { Component, Host, h, Element, State } from "@stencil/core";
+import {
+  Component,
+  Host,
+  h,
+  Element,
+  State,
+  Event,
+  EventEmitter,
+  Prop,
+} from "@stencil/core";
 import hash from "object-hash";
 
 function getDomPath(el) {
@@ -30,8 +39,17 @@ function getDomPath(el) {
 })
 export class DiscoHyperlink {
   @Element() hostEl: HTMLDivElement;
+  @Prop() inUse: boolean = false;
   @State() domPath: string;
   @State() hashedUrl: string | null = null;
+
+  @Event({
+    eventName: "discoHyperlinkClick",
+    composed: true,
+    cancelable: true,
+    bubbles: true,
+  })
+  discoHyperlinkClick: EventEmitter<string>; // domPath
 
   componentWillLoad() {
     // Populate domPath (used to listen for exits through self) and hashedUrl (used to peep through hyperlinks)
@@ -45,10 +63,12 @@ export class DiscoHyperlink {
 
     const href = this.hostEl.querySelector("a").href;
     this.hashedUrl = getHashedUrl(href);
-    // set hashedUrl as `data-hashedUrl` attribute on self
-    this.hostEl.setAttribute("data-hashedUrl", this.hashedUrl);
 
     this.domPath = getDomPath(this.hostEl);
+
+    // make these visible
+    this.hostEl.setAttribute("data-hashedUrl", this.hashedUrl);
+    this.hostEl.setAttribute("data-domPath", this.domPath);
 
     console.log(
       "disco-hyperlink:componentWillLoad",
@@ -56,11 +76,21 @@ export class DiscoHyperlink {
       this.domPath,
       this.hashedUrl
     );
+
+    // Listen for clicks on the <a> tag inside self, and emit discoHyperlinkExit
+    this.hostEl.querySelector("a").addEventListener("click", (e) => {
+      console.log("disco-hyperlink:click", e);
+      this.discoHyperlinkClick.emit(this.domPath);
+    });
   }
 
   render() {
+    const styles = {
+      backgroundColor: this.inUse ? "red" : "blue",
+    };
+
     return (
-      <Host>
+      <Host style={styles}>
         <slot></slot>
       </Host>
     );

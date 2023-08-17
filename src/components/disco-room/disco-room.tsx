@@ -1,7 +1,16 @@
-import { Component, Host, h, Element, Prop, State } from "@stencil/core";
+import {
+  Component,
+  Host,
+  h,
+  Element,
+  Prop,
+  State,
+  Listen,
+} from "@stencil/core";
 import PartySocket from "partysocket";
 import {
   type SubscribeMessage,
+  type ExitMessage,
   SINGLETON_ROOM_ID,
 } from "../../../partykit/room-types";
 import hash from "object-hash";
@@ -19,6 +28,38 @@ export class DiscoRoom {
   @State() roomSocket: PartySocket;
   @State() announcerSocket: PartySocket;
 
+  @Listen("discoHyperlinkClick")
+  handleDiscoHyperlinkClick(event: CustomEvent<string>) {
+    // When a disco-hyperlink is exited, send a message to the room to announce it
+    console.log("disco-room:handleDiscoHyperlinkClick", event.detail);
+    event.stopPropagation();
+    const msg: ExitMessage = {
+      type: "exit",
+      domPath: event.detail,
+    };
+    this.roomSocket.send(JSON.stringify(msg));
+  }
+
+  private messageHandler = async (e: MessageEvent) => {
+    const msg = await JSON.parse(e.data);
+    if (msg.type === "exit") {
+      // When a disco-hyperlink is exited, send a message to the room to announce it
+      console.log("disco-room:messageHandler", msg);
+      // Find the disco-hyperlink element with the matching data-domPath attribute, and set the inUse prop to true
+      const discoHyperlink = this.hostEl.querySelector(
+        `disco-hyperlink[data-domPath="${msg.domPath}"]`
+      );
+      if (discoHyperlink) {
+        console.log(
+          "disco-room:messageHandler found disco-hyperlink",
+          discoHyperlink
+        );
+        // set the inUse attribute to true
+        discoHyperlink.setAttribute("in-use", "true");
+      }
+    }
+  };
+
   componentWillLoad() {
     // Walk the DOM contained by this.hostEl and wrap all 'a' tags in a disco-hyperlink
     // The result looks like <disco-hyperlink><a ...>...</a></disco-hyperlink>
@@ -35,6 +76,7 @@ export class DiscoRoom {
       party: "room",
       room: this.roomId,
     });
+    this.roomSocket.addEventListener("message", this.messageHandler);
 
     // Also connect to the partyserver for the announcer for the whole host
     this.announcerSocket = new PartySocket({

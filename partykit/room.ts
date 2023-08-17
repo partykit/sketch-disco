@@ -48,11 +48,13 @@ export default {
   async onMessage(message, websocket, room) {
     const msg = JSON.parse(message as string);
     if (msg.type === "exit") {
-      // Let everyone in the current room know
+      // Let everyone in the current room know. Don't exclude the current
+      // websocket as they may have opened the link in a new tab
       room.broadcast(
         JSON.stringify(<ExitMessage>{ type: "exit", domPath: msg.domPath }),
-        [websocket.id]
+        []
       );
+      console.log("exit for room", room.id, msg.domPath);
     }
   },
   async onRequest(request, room) {
