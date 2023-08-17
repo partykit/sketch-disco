@@ -1,0 +1,9 @@
+{
+    "main": "partykit/server.ts",
+    "name": "main",
+    "persist": false,
+    "parties": {
+        "room": "partykit/room.ts",
+        "rooms": "partykit/rooms.ts"
+    }
+}

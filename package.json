@@ -26,7 +26,9 @@
     "generate": "stencil generate"
   },
   "dependencies": {
-    "@stencil/core": "^4.0.0"
+    "@stencil/core": "^4.0.0",
+    "partykit": "^0.0.0-df5c577",
+    "partysocket": "^0.0.0-df5c577"
   },
   "devDependencies": {
     "@stencil/sass": "^3.0.5",
