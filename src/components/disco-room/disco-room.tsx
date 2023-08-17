@@ -59,6 +59,10 @@ export class DiscoRoom {
         );
         // set the inUse attribute to true
         discoHyperlink.setAttribute("in-use", "true");
+        // remove the inUse attribute after 0.5 seconds
+        setTimeout(() => {
+          discoHyperlink.removeAttribute("in-use");
+        }, 500);
       }
     } else if (msg.type === "here") {
       this.connectionsCount = msg.connections;
@@ -109,6 +113,7 @@ export class DiscoRoom {
       party: "rooms",
       room: SINGLETON_ROOM_ID,
     });
+    this.announcerSocket.addEventListener("message", this.messageHandler);
   }
 
   componentDidLoad() {

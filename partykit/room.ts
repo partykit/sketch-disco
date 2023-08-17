@@ -25,7 +25,7 @@ async function updateConnections(room) {
   // Let rooms.ts know about the connection count for this room
   return await room.parties.rooms.get(SINGLETON_ROOM_ID).fetch({
     method: "POST",
-    body: JSON.stringify(<RoomConnections>{
+    body: JSON.stringify({
       roomId: room.id,
       connections: room.connections.size,
     }),
@@ -61,10 +61,14 @@ export default {
     // This is for debugging
     if (request.method === "GET") {
       return new Response(
-        JSON.stringify({
-          roomId: room.id,
-          connections: room.connections.size,
-        })
+        JSON.stringify(
+          {
+            roomId: room.id,
+            connections: room.connections.size,
+          },
+          null,
+          2
+        )
       );
     }
 

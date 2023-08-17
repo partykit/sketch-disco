@@ -1,1 +1,25 @@
 /* :host { } */
+
+:host .peep-connections {
+    @apply inline-flex p-1 bg-yellow-200 font-sans text-xs ml-1 rounded-full w-6 h-6 justify-center items-center;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1, 1);
+    }
+    30% {
+        transform: scale(1.3, 1.0);
+    }
+    100% {
+        transform: scale(1, 1);
+    }
+}
+
+:host .exit-animation {
+    /* this is a 0.5rem wide red fully rounded circle, translated by 2rem 
+       it also runs the animation orbital, once only, forwards, with easing
+    */
+    display: inline-block;
+    animation: pulse 0.25s ease-in-out 2 forwards;
+}

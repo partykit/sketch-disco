@@ -29,13 +29,15 @@ export default {
       );
       // Send the current connection counts for all of these rooms
       const rc = ((await room.storage.get("roomConnections")) ||
-        {}) as RoomConnections;
+        []) as RoomConnections;
       const subscribedRc = Object.fromEntries(
         Object.entries(rc).filter(([roomId, _]) => msg.roomIds.includes(roomId))
-      );
+      ) as RoomConnections;
+      console.log("sending initial update", subscribedRc);
       websocket.send(
         JSON.stringify(<UpdateMessage>{
           type: "update",
+          subtype: "initial",
           updates: subscribedRc,
         })
       );
@@ -60,14 +62,16 @@ export default {
       // Send the update to all subscribers
       const updateMsg = <UpdateMessage>{
         type: "update",
-        updates: <RoomConnections>{ roomId, connections },
+        subtype: "incremental",
+        updates: <RoomConnections>{ [roomId]: connections },
       };
+      console.log("checking for subscriptions to roomId", roomId);
       Array.from(room.connections).forEach(([_, subscriberWebsocket]) => {
         const attachment = subscriberWebsocket.deserializeAttachment();
         const subscriptions = attachment.subscriptions ?? [];
         console.log(
           "websocket.id subscriptions [loading]",
-          subscriberWebsocket,
+          subscriberWebsocket.id,
           subscriptions
         );
         if (subscriptions.includes(roomId)) {
@@ -93,7 +97,11 @@ export default {
         )
       );
       return new Response(
-        JSON.stringify({ roomConnections: rc, subscriptions: subscriptions })
+        JSON.stringify(
+          { roomConnections: rc, subscriptions: subscriptions },
+          null,
+          2
+        )
       );
     }
 

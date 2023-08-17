@@ -86,15 +86,16 @@ export class DiscoHyperlink {
   }
 
   render() {
-    const styles = {
-      backgroundColor: this.inUse ? "red" : "blue",
-    };
-
     return (
-      <Host style={styles}>
-        <slot></slot>
+      <Host>
+        {this.inUse && (
+          <div class="exit-animation">
+            <slot></slot>
+          </div>
+        )}
+        {!this.inUse && <slot></slot>}
         {this.peepConnections > 0 && (
-          <span class="peep-connections">({this.peepConnections})</span>
+          <span class="peep-connections">{this.peepConnections}</span>
         )}
       </Host>
     );
