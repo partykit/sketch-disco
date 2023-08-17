@@ -22,6 +22,11 @@ export default {
         ...websocket.deserializeAttachment(),
         subscriptions: msg.roomIds,
       });
+      console.log(
+        "websocket.id subscriptions [saving]",
+        websocket.id,
+        msg.roomIds
+      );
       // Send the current connection counts for all of these rooms
       const rc = ((await room.storage.get("roomConnections")) ||
         {}) as RoomConnections;
@@ -53,16 +58,21 @@ export default {
       }
       await room.storage.put("roomConnections", rc);
       // Send the update to all subscribers
+      const updateMsg = <UpdateMessage>{
+        type: "update",
+        updates: <RoomConnections>{ roomId, connections },
+      };
       Array.from(room.connections).forEach(([_, subscriberWebsocket]) => {
-        const subscriptions = subscriberWebsocket.deserializeAttachment()
-          .subscriptions as string[];
+        const attachment = subscriberWebsocket.deserializeAttachment();
+        const subscriptions = attachment.subscriptions ?? [];
+        console.log(
+          "websocket.id subscriptions [loading]",
+          subscriberWebsocket,
+          subscriptions
+        );
         if (subscriptions.includes(roomId)) {
-          subscriberWebsocket.send(
-            JSON.stringify(<UpdateMessage>{
-              type: "update",
-              updates: <RoomConnections>{ roomId, connections },
-            })
-          );
+          console.log("sending update to", subscriberWebsocket.id);
+          subscriberWebsocket.send(JSON.stringify(updateMsg));
         }
       });
       return new Response("OK");

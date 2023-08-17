@@ -11,6 +11,7 @@ import PartySocket from "partysocket";
 import {
   type SubscribeMessage,
   type ExitMessage,
+  type RoomConnections,
   SINGLETON_ROOM_ID,
 } from "../../../partykit/room-types";
 import hash from "object-hash";
@@ -27,6 +28,7 @@ export class DiscoRoom {
   @State() roomId: string = hash(window.location.href);
   @State() roomSocket: PartySocket;
   @State() announcerSocket: PartySocket;
+  @State() connectionsCount: number = 0;
 
   @Listen("discoHyperlinkClick")
   handleDiscoHyperlinkClick(event: CustomEvent<string>) {
@@ -40,11 +42,12 @@ export class DiscoRoom {
     this.roomSocket.send(JSON.stringify(msg));
   }
 
+  // The messageHandler is used by both roomSocket and announcerSocket
   private messageHandler = async (e: MessageEvent) => {
     const msg = await JSON.parse(e.data);
+    console.log("disco-room:messageHandler", msg);
     if (msg.type === "exit") {
       // When a disco-hyperlink is exited, send a message to the room to announce it
-      console.log("disco-room:messageHandler", msg);
       // Find the disco-hyperlink element with the matching data-domPath attribute, and set the inUse prop to true
       const discoHyperlink = this.hostEl.querySelector(
         `disco-hyperlink[data-domPath="${msg.domPath}"]`
@@ -57,6 +60,28 @@ export class DiscoRoom {
         // set the inUse attribute to true
         discoHyperlink.setAttribute("in-use", "true");
       }
+    } else if (msg.type === "here") {
+      this.connectionsCount = msg.connections;
+      // @TODO emit an event to another component to display this
+    } else if (msg.type === "update") {
+      const roomConnections = msg.updates as RoomConnections;
+      // roomConnections is disco-hyperlink.hashedUrl => number of connections.
+      // Iterate over all disco-hyperlink elements and set peep-connections to the number of connections,
+      // or 0 if the room's hashedUrl is not in roomConnections
+      const discoHyperlinks = this.hostEl.querySelectorAll(
+        "disco-hyperlink"
+      ) as NodeListOf<HTMLDiscoHyperlinkElement>;
+      discoHyperlinks.forEach((discoHyperlink) => {
+        const hashedUrl = discoHyperlink.getAttribute("data-hashedUrl");
+        if (hashedUrl && roomConnections[hashedUrl]) {
+          discoHyperlink.setAttribute(
+            "peep-connections",
+            roomConnections[hashedUrl].toString()
+          );
+        } else {
+          discoHyperlink.setAttribute("peep-connections", "0");
+        }
+      });
     }
   };
 
@@ -107,6 +132,9 @@ export class DiscoRoom {
   render() {
     return (
       <Host>
+        <div class="fixed right-2 bottom-2 rounded-full outline outline-1 outline-stone-400 text-xs text-stone-400 px-2 py-1 font-sans">
+          Here: {this.connectionsCount}
+        </div>
         <slot></slot>
       </Host>
     );

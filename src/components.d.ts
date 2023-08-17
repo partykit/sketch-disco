@@ -8,6 +8,7 @@ import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
     interface DiscoHyperlink {
         "inUse": boolean;
+        "peepConnections": number;
     }
     interface DiscoRoom {
         "host": string;
@@ -60,6 +61,7 @@ declare namespace LocalJSX {
     interface DiscoHyperlink {
         "inUse"?: boolean;
         "onDiscoHyperlinkClick"?: (event: DiscoHyperlinkCustomEvent<string>) => void;
+        "peepConnections"?: number;
     }
     interface DiscoRoom {
         "host"?: string;
