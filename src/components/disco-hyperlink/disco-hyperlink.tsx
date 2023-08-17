@@ -45,6 +45,8 @@ export class DiscoHyperlink {
 
     const href = this.hostEl.querySelector("a").href;
     this.hashedUrl = getHashedUrl(href);
+    // set hashedUrl as `data-hashedUrl` attribute on self
+    this.hostEl.setAttribute("data-hashedUrl", this.hashedUrl);
 
     this.domPath = getDomPath(this.hostEl);
 
