@@ -1,7 +1,8 @@
 /* :host { } */
 
 :host .peep-connections {
-    @apply inline-flex p-1 bg-yellow-200 font-sans text-xs ml-1 rounded-full w-6 h-6 justify-center items-center;
+    @apply inline-flex p-1 bg-yellow-200 ml-1 rounded-full w-6 h-6 justify-center items-center;
+    @apply text-black font-sans font-normal italic text-xs;
 }
 
 @keyframes pulse {

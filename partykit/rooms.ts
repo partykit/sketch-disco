@@ -1,4 +1,4 @@
-import { PartyKitServer } from "partykit/server";
+import { PartyKitServer, PartyKitStorage } from "partykit/server";
 import {
   type RoomConnections,
   type UpdateMessage,
@@ -12,21 +12,83 @@ import {
  * - whenever room counts change, we send an update message to all subscribers
  */
 
+// Subscriptions is a bidirectional mapping of websocket.id -> hashedUrls
+// A websocket.id sets a list of hashedUrls it is interested in. Whenever
+// one of those hashedUrls changed status, we send an update to all subscribers.
+// An instance of Subscriptions wraps two maps that are held in sync in room storage.
+class Subscriptions {
+  public wsToHashedUrls: Map<string, Set<string>>;
+  private hashedUrlToWs: Map<string, Set<string>>;
+  private storage: PartyKitStorage;
+
+  constructor(storage: PartyKitStorage) {
+    this.storage = storage;
+    this.wsToHashedUrls = new Map();
+    this.hashedUrlToWs = new Map();
+  }
+
+  static async load(room: { storage: PartyKitStorage }) {
+    const instance = new Subscriptions(room.storage);
+    const wsToHashedUrls = ((await room.storage.get("wsToHashedUrls")) ||
+      []) as Map<string, Set<string>>;
+    const hashedUrlToWs = ((await room.storage.get("hashedUrlToWs")) ||
+      []) as Map<string, Set<string>>;
+    instance.wsToHashedUrls = new Map(wsToHashedUrls);
+    instance.hashedUrlToWs = new Map(hashedUrlToWs);
+    return instance;
+  }
+
+  private async persist() {
+    await this.storage.put("wsToHashedUrls", this.wsToHashedUrls);
+    await this.storage.put("hashedUrlToWs", this.hashedUrlToWs);
+  }
+
+  async set(ws: string, hashedUrls: Set<string> | null) {
+    // If null is passed, remove A and its associations
+    if (hashedUrls === null) {
+      if (this.wsToHashedUrls.has(ws)) {
+        for (const hashedUrl of this.wsToHashedUrls.get(ws)!) {
+          this.hashedUrlToWs.get(hashedUrl)!.delete(ws);
+        }
+        this.wsToHashedUrls.delete(ws);
+      }
+    } else {
+      // Remove ws's old associations
+      if (this.wsToHashedUrls.has(ws)) {
+        for (const hashedUrl of this.wsToHashedUrls.get(ws)!) {
+          this.hashedUrlToWs.get(hashedUrl)!.delete(ws);
+          if (this.hashedUrlToWs.get(hashedUrl)!.size === 0) {
+            this.hashedUrlToWs.delete(hashedUrl);
+          }
+        }
+      }
+
+      // Add ws's new associations
+      this.wsToHashedUrls.set(ws, hashedUrls);
+      for (const hashedUrl of hashedUrls) {
+        if (!this.hashedUrlToWs.has(hashedUrl)) {
+          this.hashedUrlToWs.set(hashedUrl, new Set());
+        }
+        this.hashedUrlToWs.get(hashedUrl)!.add(ws);
+      }
+    }
+
+    await this.persist();
+  }
+
+  lookup(hashedUrl: string) {
+    return this.hashedUrlToWs.get(hashedUrl) || new Set();
+  }
+}
+
 export default {
   async onMessage(message, websocket, room) {
     const msg = JSON.parse(message as string);
     if (msg.type === "subscribe") {
       // This websocket wants to hear about connection count changes for all of these rooms
       // Stash it on the websocket attachment so that it goes away when the websocket closes
-      websocket.serializeAttachment({
-        ...websocket.deserializeAttachment(),
-        subscriptions: msg.roomIds,
-      });
-      console.log(
-        "websocket.id subscriptions [saving]",
-        websocket.id,
-        msg.roomIds
-      );
+      const subscriptions = await Subscriptions.load(room);
+      await subscriptions.set(websocket.id, new Set(msg.roomIds));
       // Send the current connection counts for all of these rooms
       const rc = ((await room.storage.get("roomConnections")) ||
         []) as RoomConnections;
@@ -66,15 +128,10 @@ export default {
         updates: <RoomConnections>{ [roomId]: connections },
       };
       console.log("checking for subscriptions to roomId", roomId);
+      const subscriptions = await Subscriptions.load(room);
+      const subscribers = subscriptions.lookup(roomId);
       Array.from(room.connections).forEach(([_, subscriberWebsocket]) => {
-        const attachment = subscriberWebsocket.deserializeAttachment();
-        const subscriptions = attachment.subscriptions ?? [];
-        console.log(
-          "websocket.id subscriptions [loading]",
-          subscriberWebsocket.id,
-          subscriptions
-        );
-        if (subscriptions.includes(roomId)) {
+        if (subscribers.has(subscriberWebsocket.id)) {
           console.log("sending update to", subscriberWebsocket.id);
           subscriberWebsocket.send(JSON.stringify(updateMsg));
         }
@@ -86,19 +143,10 @@ export default {
     if (request.method === "GET") {
       const rc = ((await room.storage.get("roomConnections")) ||
         {}) as RoomConnections;
-      const subscriptions = Object.fromEntries(
-        Array.from(room.connections).map(
-          ([subscriberRoomId, subscriberWebsocket]) => {
-            const roomSubscriptions =
-              (subscriberWebsocket.deserializeAttachment().subscriptions ??
-                []) as string[];
-            return [subscriberRoomId, roomSubscriptions];
-          }
-        )
-      );
+      const subscriptions = await Subscriptions.load(room);
       return new Response(
         JSON.stringify(
-          { roomConnections: rc, subscriptions: subscriptions },
+          { roomConnections: rc, subscriptions: subscriptions.wsToHashedUrls },
           null,
           2
         )
