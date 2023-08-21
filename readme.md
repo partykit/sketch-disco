@@ -10,7 +10,7 @@ Right now there is:
 
 - disco-room -- links internal to the site are badged with how many people are connected at the other end, and when another user follows a hypoerlink then it bounces for everyone else.
 
-<img width="746" alt="Screenshot 2023-08-21 at 18 27 14" src="https://github.com/partykit/sketch-disco/assets/265390/b6bb3f8d-ba92-48da-bfd3-fc415d553544">
+<img width="746" alt="image" src="https://github.com/partykit/sketch-disco/assets/265390/f158f682-b55f-4105-9b8e-e8ee52800986">
 
 ## Experimental!
 
