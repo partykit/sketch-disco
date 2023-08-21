@@ -15,3 +15,12 @@ This component was created during [Matt](https://interconnected.org)'s summer 20
 ## Bugs
 
 - [ ] When disco-room receives an 'update' message, it zeros the number of peep-connections for all container disco-hyperlinks. It should not, because update is used as a batch sync at the beginning, but also incremental updates.
+
+## To do
+
+- [ ] Publish the web component to npmjs so anyone can use it
+- [ ] Deploy the PartyKit server so that there's a public host to use
+- [ ] Remove debug logging
+- [ ] Add documentation
+- [ ] Add disco-presence to show how many people are on the page (this is hardcoded at the moment)
+- [ ] Add disco-cursors with frosted glass cursors
