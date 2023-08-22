@@ -1,7 +1,7 @@
 {
   "name": "disco-party",
-  "version": "0.0.1",
-  "description": "Stencil Component Starter",
+  "version": "0.0.3",
+  "description": "A handful of experimental PartyKit-backed web components for ambient presence",
   "main": "dist/index.cjs.js",
   "module": "dist/index.js",
   "es2015": "dist/esm/index.mjs",
@@ -42,5 +42,14 @@
     "stencil-tailwind-plugin": "^1.8.0",
     "tailwindcss": "^3.3.3"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/partykit/sketch-disco/issues"
+  },
+  "homepage": "https://github.com/partykit/sketch-disco#readme",
+  "keywords": [
+    "web components",
+    "partykit"
+  ],
+  "author": "Matt Webb"
 }
