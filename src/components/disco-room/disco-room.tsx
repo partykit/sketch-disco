@@ -82,8 +82,6 @@ export class DiscoRoom {
             "peep-connections",
             roomConnections[hashedUrl].toString()
           );
-        } else {
-          discoHyperlink.setAttribute("peep-connections", "0");
         }
       });
     }

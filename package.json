@@ -28,7 +28,7 @@
   "dependencies": {
     "@stencil/core": "^4.0.0",
     "object-hash": "^3.0.0",
-    "partykit": "^0.0.0-df5c577",
+    "partykit": "^0.0.0-18c0543",
     "partysocket": "^0.0.0-df5c577"
   },
   "devDependencies": {
