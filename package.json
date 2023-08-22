@@ -12,7 +12,7 @@
   "unpkg": "dist/disco-party/disco-party.esm.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ionic-team/stencil-component-starter.git"
+    "url": "https://github.com/partykit/sketch-disco.git"
   },
   "files": [
     "dist/",

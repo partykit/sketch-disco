@@ -1,6 +1,6 @@
 {
     "main": "partykit/server.ts",
-    "name": "main",
+    "name": "disco-party",
     "persist": false,
     "parties": {
         "room": "partykit/room.ts",
