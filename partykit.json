@@ -4,6 +4,7 @@
     "persist": false,
     "parties": {
         "room": "partykit/room.ts",
-        "rooms": "partykit/rooms.ts"
+        "rooms": "partykit/rooms.ts",
+        "cursors": "partykit/cursors.ts"
     }
 }

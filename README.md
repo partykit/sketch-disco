@@ -9,6 +9,7 @@ These components are intended to add a sense of translucency and presence to sta
 Right now there is:
 
 - disco-room -- links internal to the site are badged with how many people are connected at the other end, and when another user follows a hypoerlink then it bounces for everyone else.
+- disco-cursors -- shows other people's cursors on the page, as if behind frosted glass.
 
 ![image](/assets/peep.png)
 
@@ -64,12 +65,15 @@ And your host will be something like `disco-party.USERNAME.partykit.dev`.
 In your site template, wrap the content that you want to be part of the disco-room in a `<disco-room>` tag.
 
 ```html
+<disco-cursors host="127.0.0.1:1999"></disco-cursors>
 <disco-room host="127.0.0.1:1999">
   <h1>My disco room</h1>
   <p>Some content</p>
   <a href="/some-link">A link</a>
 </disco-room>
 ```
+
+(You may need to put `&nbsp;` in empty tags to stop pre-processors collapsing them.)
 
 ## Bugs
 
@@ -82,5 +86,7 @@ In your site template, wrap the content that you want to be part of the disco-ro
 - [ ] Remove debug logging
 - [ ] Add documentation
 - [ ] Add disco-presence to show how many people are on the page (this is hardcoded at the moment)
-- [ ] Add disco-cursors with frosted glass cursors
+- [x] Add disco-cursors with frosted glass cursors
 - [ ] Allow a page to have multiple active "zones" in the same room (so boilerplate can be ignored)
+- [ ] Fix logic of where cursors appear given page scroll (given responsiveness they will never match up exactly)
+- [ ] The room.storage is blowing is -- is it not being cleared on ws close, or does it need to be cleared on server boot?

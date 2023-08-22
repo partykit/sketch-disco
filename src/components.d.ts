@@ -6,6 +6,9 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
+    interface DiscoCursors {
+        "host": string;
+    }
     interface DiscoHyperlink {
         "inUse": boolean;
         "peepConnections": number;
@@ -19,6 +22,12 @@ export interface DiscoHyperlinkCustomEvent<T> extends CustomEvent<T> {
     target: HTMLDiscoHyperlinkElement;
 }
 declare global {
+    interface HTMLDiscoCursorsElement extends Components.DiscoCursors, HTMLStencilElement {
+    }
+    var HTMLDiscoCursorsElement: {
+        prototype: HTMLDiscoCursorsElement;
+        new (): HTMLDiscoCursorsElement;
+    };
     interface HTMLDiscoHyperlinkElement extends Components.DiscoHyperlink, HTMLStencilElement {
     }
     var HTMLDiscoHyperlinkElement: {
@@ -32,11 +41,15 @@ declare global {
         new (): HTMLDiscoRoomElement;
     };
     interface HTMLElementTagNameMap {
+        "disco-cursors": HTMLDiscoCursorsElement;
         "disco-hyperlink": HTMLDiscoHyperlinkElement;
         "disco-room": HTMLDiscoRoomElement;
     }
 }
 declare namespace LocalJSX {
+    interface DiscoCursors {
+        "host"?: string;
+    }
     interface DiscoHyperlink {
         "inUse"?: boolean;
         "onDiscoHyperlinkClick"?: (event: DiscoHyperlinkCustomEvent<string>) => void;
@@ -46,6 +59,7 @@ declare namespace LocalJSX {
         "host"?: string;
     }
     interface IntrinsicElements {
+        "disco-cursors": DiscoCursors;
         "disco-hyperlink": DiscoHyperlink;
         "disco-room": DiscoRoom;
     }
@@ -54,6 +68,7 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            "disco-cursors": LocalJSX.DiscoCursors & JSXBase.HTMLAttributes<HTMLDiscoCursorsElement>;
             "disco-hyperlink": LocalJSX.DiscoHyperlink & JSXBase.HTMLAttributes<HTMLDiscoHyperlinkElement>;
             "disco-room": LocalJSX.DiscoRoom & JSXBase.HTMLAttributes<HTMLDiscoRoomElement>;
         }
