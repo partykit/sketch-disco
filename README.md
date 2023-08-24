@@ -75,6 +75,8 @@ In your site template, wrap the content that you want to be part of the disco-ro
 
 (You may need to put `&nbsp;` in empty tags to stop pre-processors collapsing them.)
 
+Optionally: to include only _some_ of the content inside the disco-room, wrap sections in `<disco-include>` tags. If you don't do this, then the entire disco-room will be included.
+
 ## Bugs
 
 - [x] When disco-room receives an 'update' message, it zeros the number of peep-connections for all container disco-hyperlinks. It should not, because update is used as a batch sync at the beginning, but also incremental updates.

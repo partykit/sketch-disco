@@ -90,7 +90,13 @@ export class DiscoRoom {
   componentWillLoad() {
     // Walk the DOM contained by this.hostEl and wrap all 'a' tags in a disco-hyperlink
     // The result looks like <disco-hyperlink><a ...>...</a></disco-hyperlink>
-    const links = this.hostEl.querySelectorAll("a");
+    // However, if there are disco-include elements present, only wrap the 'a' tags that
+    // are inside a disco-include.
+    const includes = this.hostEl.querySelectorAll("disco-include");
+    //console.log("disco-room:componentWillLoad includes", includes);
+    const selector = includes.length > 0 ? "disco-include a" : "a";
+
+    const links = this.hostEl.querySelectorAll(selector);
     links.forEach((link) => {
       const discoLink = document.createElement("disco-hyperlink");
       link.parentNode.insertBefore(discoLink, link);
