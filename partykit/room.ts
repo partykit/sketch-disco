@@ -23,7 +23,7 @@ function broadcastConnections(room: PartyKitRoom) {
 
 async function updateConnections(room) {
   // Let rooms.ts know about the connection count for this room
-  return await room.parties.rooms.get(SINGLETON_ROOM_ID).fetch({
+  return await room.context.parties.rooms.get(SINGLETON_ROOM_ID).fetch({
     method: "POST",
     body: JSON.stringify({
       roomId: room.id,

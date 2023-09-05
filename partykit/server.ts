@@ -1,3 +1,7 @@
 import { PartyKitServer } from "partykit/server";
 
-export default {} satisfies PartyKitServer;
+export default {
+  onConnect(websocket, room) {
+    console.log("no-op");
+  },
+} satisfies PartyKitServer;

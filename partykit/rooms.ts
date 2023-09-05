@@ -1,4 +1,8 @@
-import { PartyKitServer, PartyKitStorage } from "partykit/server";
+import {
+  PartyKitConnection,
+  PartyKitServer,
+  PartyStorage,
+} from "partykit/server";
 import {
   type RoomConnections,
   type UpdateMessage,
@@ -19,15 +23,15 @@ import {
 class Subscriptions {
   public wsToHashedUrls: Map<string, Set<string>>;
   private hashedUrlToWs: Map<string, Set<string>>;
-  private storage: PartyKitStorage;
+  private storage: PartyStorage;
 
-  constructor(storage: PartyKitStorage) {
+  constructor(storage: PartyStorage) {
     this.storage = storage;
     this.wsToHashedUrls = new Map();
     this.hashedUrlToWs = new Map();
   }
 
-  static async load(room: { storage: PartyKitStorage }) {
+  static async load(room: { storage: PartyStorage }) {
     const instance = new Subscriptions(room.storage);
     const wsToHashedUrls = ((await room.storage.get("wsToHashedUrls")) ||
       []) as Map<string, Set<string>>;
@@ -95,7 +99,7 @@ export default {
       const subscribedRc = Object.fromEntries(
         Object.entries(rc).filter(([roomId, _]) => msg.roomIds.includes(roomId))
       ) as RoomConnections;
-      console.log("sending initial update", subscribedRc);
+      //console.log("sending initial update", subscribedRc);
       websocket.send(
         JSON.stringify(<UpdateMessage>{
           type: "update",
@@ -103,6 +107,22 @@ export default {
           updates: subscribedRc,
         })
       );
+    }
+  },
+
+  async onClose(websocket, room) {
+    // Remove this websocket from all subscriptions
+    const subscriptions = await Subscriptions.load(room);
+    await subscriptions.set(websocket.id, null);
+
+    // Take the opportunity to remove any other websockets that are still hanging around
+    const wsIds = Array.from(room.getConnections()).map((ws) => ws.id);
+    const wsIdsToRemove = wsIds.filter(
+      (wsId) => !subscriptions.wsToHashedUrls.has(wsId)
+    );
+    for (const wsId of wsIdsToRemove) {
+      //console.log("removing stale websocket", wsId);
+      await subscriptions.set(wsId, null);
     }
   },
 
@@ -127,12 +147,12 @@ export default {
         subtype: "incremental",
         updates: <RoomConnections>{ [roomId]: connections },
       };
-      console.log("checking for subscriptions to roomId", roomId);
+      //console.log("checking for subscriptions to roomId", roomId);
       const subscriptions = await Subscriptions.load(room);
       const subscribers = subscriptions.lookup(roomId);
-      Array.from(room.connections).forEach(([_, subscriberWebsocket]) => {
+      Array.from(room.getConnections()).map((subscriberWebsocket) => {
         if (subscribers.has(subscriberWebsocket.id)) {
-          console.log("sending update to", subscriberWebsocket.id);
+          //console.log("sending update to", subscriberWebsocket.id);
           subscriberWebsocket.send(JSON.stringify(updateMsg));
         }
       });
@@ -141,18 +161,48 @@ export default {
 
     // This is for debugging
     if (request.method === "GET") {
-      const rc = ((await room.storage.get("roomConnections")) ||
-        {}) as RoomConnections;
-      const subscriptions = await Subscriptions.load(room);
-      return new Response(
-        JSON.stringify(
-          { roomConnections: rc, subscriptions: subscriptions.wsToHashedUrls },
-          null,
-          2
-        )
-      );
+      const entries = await room.storage.list();
+      // Make an object with all the keys and their values
+      const obj = {};
+      for (const entry of entries) {
+        obj[entry[0]] = serializable(entry[1]);
+      }
+      return new Response(JSON.stringify(obj, null, 2));
     }
 
     return new Response("Unknown method", { status: 400 });
   },
 } satisfies PartyKitServer;
+
+// A function that converts any value to a JSON serializable value. It calls itself recursively
+// Strings, numbers, booleans, and dates are passed through.
+// Arrays looked at element by element, recursively.
+// Maps and Sets are converted to arrays, and looked at element by element, recursively.
+function serializable(value: any): any {
+  if (typeof value === "string") {
+    return value;
+  } else if (typeof value === "number") {
+    return value;
+  } else if (typeof value === "boolean") {
+    return value;
+  } else if (value instanceof Date) {
+    return value;
+  } else if (Array.isArray(value)) {
+    return value.map((v) => serializable(v));
+  } else if (value instanceof Map) {
+    return Array.from(value.entries()).map(([k, v]) => [
+      serializable(k),
+      serializable(v),
+    ]);
+  } else if (value instanceof Set) {
+    return Array.from(value).map((v) => serializable(v));
+  } else if (typeof value === "object") {
+    const obj = {};
+    for (const [k, v] of Object.entries(value)) {
+      obj[k] = serializable(v);
+    }
+    return obj;
+  } else {
+    return null;
+  }
+}
