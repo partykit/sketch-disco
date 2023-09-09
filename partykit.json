@@ -3,8 +3,7 @@
     "name": "disco-party",
     "persist": false,
     "parties": {
-        "room": "partykit/room.ts",
-        "rooms": "partykit/rooms.ts",
-        "cursors": "partykit/cursors.ts"
+        "cursors": "partykit/cursors.ts",
+        "tracker": "partykit/tracker.ts"
     }
 }

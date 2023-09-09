@@ -9,10 +9,8 @@ import {
 } from "@stencil/core";
 import PartySocket from "partysocket";
 import {
-  type SubscribeMessage,
   type ExitMessage,
   type RoomConnections,
-  SINGLETON_ROOM_ID,
 } from "../../../partykit/room-types";
 import hash from "object-hash";
 
@@ -67,6 +65,16 @@ export class DiscoRoom {
     } else if (msg.type === "here") {
       this.connectionsCount = msg.connections;
       // @TODO emit an event to another component to display this
+    } else if (msg.type === "connections") {
+      // This is a message about another hashedUrl on this page
+      const { hashedUrl, connections } = msg;
+      // Find the disco-hyperlink element with the matching data-hashedUrl attribute, and set the peep-connections prop to the number of connections
+      const discoHyperlink = this.hostEl.querySelector(
+        `disco-hyperlink[data-hashedUrl="${hashedUrl}"]`
+      );
+      if (discoHyperlink) {
+        discoHyperlink.setAttribute("peep-connections", connections.toString());
+      }
     } else if (msg.type === "update") {
       const roomConnections = msg.updates as RoomConnections;
       // roomConnections is disco-hyperlink.hashedUrl => number of connections.
@@ -106,18 +114,20 @@ export class DiscoRoom {
     // Connect to the partyserver for this specific room
     this.roomSocket = new PartySocket({
       host: this.host,
-      party: "room",
+      party: "tracker",
       room: this.roomId,
     });
     this.roomSocket.addEventListener("message", this.messageHandler);
 
     // Also connect to the partyserver for the announcer for the whole host
+    /*
     this.announcerSocket = new PartySocket({
       host: this.host,
       party: "rooms",
       room: SINGLETON_ROOM_ID,
     });
     this.announcerSocket.addEventListener("message", this.messageHandler);
+    */
   }
 
   componentDidLoad() {
@@ -128,7 +138,7 @@ export class DiscoRoom {
         link.getAttribute("data-hashedUrl")
       ) || [];
 
-    const msg: SubscribeMessage = {
+    /*const msg: SubscribeMessage = {
       type: "subscribe",
       roomIds: hashedUrls,
     };
@@ -136,6 +146,14 @@ export class DiscoRoom {
     console.log("disco-room:componentDidLoad sending subscribe", msg);
 
     this.announcerSocket.send(JSON.stringify(msg));
+    */
+
+    const msg = {
+      type: "init",
+      hashedUrls: hashedUrls,
+    };
+    console.log("disco-room:componentDidLoad sending init", msg);
+    this.roomSocket.send(JSON.stringify(msg));
   }
 
   render() {

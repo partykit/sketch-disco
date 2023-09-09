@@ -89,6 +89,7 @@ Optionally: to include only _some_ of the content inside the disco-room, wrap se
 - [ ] Add documentation
 - [ ] Add disco-presence to show how many people are on the page (this is hardcoded at the moment)
 - [x] Add disco-cursors with frosted glass cursors
-- [ ] Allow a page to have multiple active "zones" in the same room (so boilerplate can be ignored)
+- [x] Allow a page to have multiple active "zones" in the same room (so boilerplate can be ignored)
 - [ ] Fix logic of where cursors appear given page scroll (given responsiveness they will never match up exactly)
-- [ ] The room.storage is blowing is -- is it not being cleared on ws close, or does it need to be cleared on server boot?
+- [x] The room.storage is blowing up -- is it not being cleared on ws close, or does it need to be cleared on server boot?
+- [ ] tracker subscriptions will leave litter as some URLs change the URLs they subscribe to, but don't unsubscribe (e.g. the front page). Each subscription should be a separate key in storage ('subscription-:hashedUrl') and the value is when it was set. Keys over 24 hours old should be removed.
