@@ -1,6 +1,6 @@
 {
   "name": "disco-party",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "A handful of experimental PartyKit-backed web components for ambient presence",
   "main": "dist/index.cjs.js",
   "module": "dist/index.js",

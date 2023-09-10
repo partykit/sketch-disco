@@ -24,8 +24,7 @@ export class DiscoRoom {
 
   @Prop() host: string;
   @State() roomId: string = hash(window.location.href);
-  @State() roomSocket: PartySocket;
-  @State() announcerSocket: PartySocket;
+  @State() socket: PartySocket;
   @State() connectionsCount: number = 0;
 
   @Listen("discoHyperlinkClick")
@@ -37,10 +36,10 @@ export class DiscoRoom {
       type: "exit",
       domPath: event.detail,
     };
-    this.roomSocket.send(JSON.stringify(msg));
+    this.socket.send(JSON.stringify(msg));
   }
 
-  // The messageHandler is used by both roomSocket and announcerSocket
+  // The messageHandler is used by socket
   private messageHandler = async (e: MessageEvent) => {
     const msg = await JSON.parse(e.data);
     console.log("disco-room:messageHandler", msg);
@@ -112,22 +111,12 @@ export class DiscoRoom {
     });
 
     // Connect to the partyserver for this specific room
-    this.roomSocket = new PartySocket({
+    this.socket = new PartySocket({
       host: this.host,
-      party: "tracker",
+      party: "hyperspace",
       room: this.roomId,
     });
-    this.roomSocket.addEventListener("message", this.messageHandler);
-
-    // Also connect to the partyserver for the announcer for the whole host
-    /*
-    this.announcerSocket = new PartySocket({
-      host: this.host,
-      party: "rooms",
-      room: SINGLETON_ROOM_ID,
-    });
-    this.announcerSocket.addEventListener("message", this.messageHandler);
-    */
+    this.socket.addEventListener("message", this.messageHandler);
   }
 
   componentDidLoad() {
@@ -138,30 +127,22 @@ export class DiscoRoom {
         link.getAttribute("data-hashedUrl")
       ) || [];
 
-    /*const msg: SubscribeMessage = {
-      type: "subscribe",
-      roomIds: hashedUrls,
-    };
-
-    console.log("disco-room:componentDidLoad sending subscribe", msg);
-
-    this.announcerSocket.send(JSON.stringify(msg));
-    */
-
     const msg = {
       type: "init",
       hashedUrls: hashedUrls,
     };
     console.log("disco-room:componentDidLoad sending init", msg);
-    this.roomSocket.send(JSON.stringify(msg));
+    this.socket.send(JSON.stringify(msg));
   }
 
   render() {
     return (
       <Host>
-        <div class="fixed right-2 bottom-2 rounded-full outline outline-1 outline-stone-400 text-xs text-stone-400 px-2 py-1 font-sans">
-          Here: {this.connectionsCount}
-        </div>
+        {this.connectionsCount > 0 && (
+          <div class="fixed right-2 bottom-2 rounded-full outline outline-1 outline-stone-400 text-xs text-stone-400 px-2 py-1 font-sans">
+            Here: {this.connectionsCount}
+          </div>
+        )}
         <slot></slot>
       </Host>
     );
