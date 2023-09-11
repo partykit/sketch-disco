@@ -47,10 +47,25 @@ type HereMessage = {
   connections: number;
 };
 
+// In-memory cache
+// When a client sends an init message, which is whenever there is a new connection,
+// a party-to-party subscribe message is POSTed to every hashedUrl room. This is noisy.
+// To avoid this noise, we cache the number of connections for each hashedUrl room.
+// A new subscribe message is sent max once an hour.
+type Cache = {
+  [hashedUrl: string]: {
+    subscribedAt: Date;
+    connections: number;
+  };
+};
+
 export default class Connections implements PartyKitServer {
   readonly options = {
     hibernate: true,
   };
+
+  // In-memory cache of subscriptions
+  cache: Cache = {};
 
   constructor(public party: Party) {}
 
@@ -74,15 +89,40 @@ export default class Connections implements PartyKitServer {
 
   async onConnect(connection: Connection) {
     // The number of connections has changed, so let all subscribers know
-    await this.publish();
+    const connections = this.connectionsCount();
+    await this.publish(connections);
   }
 
   async onClose(connection: Connection) {
     // The number of connections has changed, so let all subscribers know
-    await this.publish();
+    // Deduct the current connection
+    const connections = this.connectionsCount();
+    await this.publish(connections - 1);
   }
 
   async subscribe(hashedUrl: string, connection: Connection) {
+    // Check the cache. We'll only send this subscribe message if it's been more than an hour
+    // since the last one
+    const cached = this.cache[hashedUrl];
+    if (
+      cached &&
+      new Date().getTime() - cached.subscribedAt.getTime() < 60 * 60 * 1000
+    ) {
+      // The cache is fresh, so we don't need to send a subscribe message
+      // But we do need to send the current connections count, if over zero
+      if (cached.connections > 0) {
+        connection.send(
+          JSON.stringify({
+            type: "connections",
+            hashedUrl: hashedUrl,
+            connections: cached.connections,
+          } as ConnectionsMessage)
+        );
+      }
+      return;
+    }
+
+    // The cache is stale, so we need to send a subscribe message
     const response = await this.party.context.parties.hyperspace
       .get(hashedUrl)
       .fetch({
@@ -94,15 +134,19 @@ export default class Connections implements PartyKitServer {
       });
     // The response might be a connections message, if the connection count is > 0
     const msg = (await response.json()) as any;
-    if (msg.type === "connections") {
-      // Let the current connection know
+    const connections = (msg.type === "connections" && msg.connections) || 0;
+    // Update the cache
+    this.cache[hashedUrl] = {
+      subscribedAt: new Date(),
+      connections: connections,
+    };
+    if (connections > 0) {
+      // Let the current connection know, if the connections count is > 0
       connection.send(JSON.stringify(msg as ConnectionsMessage));
     }
   }
 
-  async publish() {
-    const connections = this.connectionsCount();
-
+  async publish(connections: number) {
     // Let all connections to this page know how many connections there are
     this.party.broadcast(
       JSON.stringify({
@@ -155,6 +199,7 @@ export default class Connections implements PartyKitServer {
             subscribers: serializable(subscribers),
             connections: this.connectionsCount(),
             hashedUrl: this.party.id,
+            cache: serializable(this.cache),
           },
           null,
           2
@@ -172,24 +217,28 @@ export default class Connections implements PartyKitServer {
           `hashedUrl-${hashedUrl}`,
           new Date().toISOString()
         );
-        // Respond to the the new subscriber with how many connections there are currently,
-        // if over zero (to reduce noise)
+        // Respond to the the new subscriber with how many connections there are currently.
+        // This will be passed to the client if it is over zero
         const connections = this.connectionsCount();
-        if (connections > 0) {
-          return new Response(
-            JSON.stringify({
-              type: "connections",
-              hashedUrl: this.party.id,
-              connections: this.connectionsCount(),
-            } as ConnectionsMessage)
-          );
-        } else {
-          // type: "success" is a null message that the requester ignores
-          return new Response(JSON.stringify({ type: "success" }));
-        }
+        return new Response(
+          JSON.stringify({
+            type: "connections",
+            hashedUrl: this.party.id,
+            connections: this.connectionsCount(),
+          } as ConnectionsMessage)
+        );
       } else if (msg.type === "connections") {
         // We've been sent a connections message from a party we've previously subscribed to
-        // It's an update! Let all connections to this room know
+        // It's an update! Let all connections to this room know.
+        // Also record it in the cache, if this is a subscriber we're interested in
+        const { hashedUrl, connections } = msg as ConnectionsMessage;
+        if (this.cache[hashedUrl]) {
+          this.cache[hashedUrl] = {
+            ...this.cache[hashedUrl],
+            connections: connections,
+          };
+        }
+        // Now broadcast the message to all clients in this room
         this.party.broadcast(JSON.stringify(msg), []);
         return new Response(JSON.stringify({ type: "success" }));
       } else {

@@ -94,4 +94,5 @@ Optionally: to include only _some_ of the content inside the disco-room, wrap se
 - [x] The room.storage is blowing up -- is it not being cleared on ws close, or does it need to be cleared on server boot?
 - [x] hyperspace subscriptions will leave litter as some URLs change the URLs they subscribe to, but don't unsubscribe (e.g. the front page). Each subscription should be a separate key in storage ('subscription-:hashedUrl') and the value is when it was set. Keys over 24 hours old should be removed.
 - [ ] hyperspace should issue unsubscribed on onClone if there are no connections left
-- x ] hyperspace should not reply to a subscribe message unless it has >0 connections
+- [x] hyperspace should not reply to a subscribe message unless it has >0 connections
+- [ ] debounce subscribe POSTs: a subscribe message should be sent max once every 24 hours, and the connections count retained so POSTs aren't made unless old
