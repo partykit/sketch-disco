@@ -77,7 +77,7 @@ export default class Connections implements PartyKitServer {
     await this.publish();
   }
 
-  async onDisconnect(connection: Connection) {
+  async onClose(connection: Connection) {
     // The number of connections has changed, so let all subscribers know
     await this.publish();
   }
@@ -92,7 +92,7 @@ export default class Connections implements PartyKitServer {
           hashedUrl: this.party.id,
         }),
       });
-    // The response is probably a connections message
+    // The response might be a connections message, if the connection count is > 0
     const msg = (await response.json()) as any;
     if (msg.type === "connections") {
       // Let the current connection know
@@ -173,18 +173,25 @@ export default class Connections implements PartyKitServer {
           new Date().toISOString()
         );
         // Respond to the the new subscriber with how many connections there are currently,
-        return new Response(
-          JSON.stringify({
-            type: "connections",
-            hashedUrl: this.party.id,
-            connections: this.connectionsCount(),
-          } as ConnectionsMessage)
-        );
+        // if over zero (to reduce noise)
+        const connections = this.connectionsCount();
+        if (connections > 0) {
+          return new Response(
+            JSON.stringify({
+              type: "connections",
+              hashedUrl: this.party.id,
+              connections: this.connectionsCount(),
+            } as ConnectionsMessage)
+          );
+        } else {
+          // type: "success" is a null message that the requester ignores
+          return new Response(JSON.stringify({ type: "success" }));
+        }
       } else if (msg.type === "connections") {
         // We've been sent a connections message from a party we've previously subscribed to
         // It's an update! Let all connections to this room know
         this.party.broadcast(JSON.stringify(msg), []);
-        return new Response("ok");
+        return new Response(JSON.stringify({ type: "success" }));
       } else {
         return new Response("invalid message type", { status: 400 });
       }
