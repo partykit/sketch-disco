@@ -71,12 +71,10 @@ export default class Connections implements PartyKitServer {
 
   constructor(public party: Party) {}
 
-  _connectionsCount() {
+  connectionsCount() {
     // Length of this.party.getConnections() (a map)
     return Array.from(this.party.getConnections()).length;
   }
-
-  connectionsCount = debounce(this._connectionsCount, 500, true);
 
   async onMessage(message: string | ArrayBuffer, connection: Connection) {
     const msg = JSON.parse(message as string);
@@ -190,7 +188,7 @@ export default class Connections implements PartyKitServer {
     }
   }
 
-  publish = debounce(this._publish, 1000, false);
+  publish = debounce(async () => await this._publish(), 1000, false);
 
   async onRequest(req: Request, party: Party) {
     if (req.method === "GET") {
