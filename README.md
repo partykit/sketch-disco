@@ -95,4 +95,5 @@ Optionally: to include only _some_ of the content inside the disco-room, wrap se
 - [x] hyperspace subscriptions will leave litter as some URLs change the URLs they subscribe to, but don't unsubscribe (e.g. the front page). Each subscription should be a separate key in storage ('subscription-:hashedUrl') and the value is when it was set. Keys over 24 hours old should be removed.
 - [ ] hyperspace should issue unsubscribed on onClone if there are no connections left
 - [x] hyperspace should not reply to a subscribe message unless it has >0 connections
-- [ ] debounce subscribe POSTs: a subscribe message should be sent max once every 24 hours, and the connections count retained so POSTs aren't made unless old
+- [x] cache subscribe POSTs: a subscribe message should be sent max once every 24 hours, and the connections count retained so POSTs aren't made unless old
+- [ ] debounce publish POSTs: an updated connections message is sent every time the number of connections changes. This is noisy. Instead it should be debounced to send max every 1 second (but how do we ensure that the latest message is sent?)

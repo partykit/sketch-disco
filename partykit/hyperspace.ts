@@ -5,6 +5,8 @@ import type {
   Request,
 } from "partykit/server";
 
+var debounce = require("debounce");
+
 /* hyperspace.ts
  * Room ID corresponds to hashed URL.
  * - tracks number of connections and lets all subscribed parties know
@@ -52,7 +54,7 @@ type HereMessage = {
 // a party-to-party subscribe message is POSTed to every hashedUrl room. This is noisy.
 // To avoid this noise, we cache the number of connections for each hashedUrl room.
 // A new subscribe message is sent max once an hour.
-type Cache = {
+type SubscriptionsCache = {
   [hashedUrl: string]: {
     subscribedAt: Date;
     connections: number;
@@ -65,14 +67,16 @@ export default class Connections implements PartyKitServer {
   };
 
   // In-memory cache of subscriptions
-  cache: Cache = {};
+  subscriptionsCache: SubscriptionsCache = {};
 
   constructor(public party: Party) {}
 
-  connectionsCount() {
+  _connectionsCount() {
     // Length of this.party.getConnections() (a map)
     return Array.from(this.party.getConnections()).length;
   }
+
+  connectionsCount = debounce(this._connectionsCount, 500, true);
 
   async onMessage(message: string | ArrayBuffer, connection: Connection) {
     const msg = JSON.parse(message as string);
@@ -89,21 +93,20 @@ export default class Connections implements PartyKitServer {
 
   async onConnect(connection: Connection) {
     // The number of connections has changed, so let all subscribers know
-    const connections = this.connectionsCount();
-    await this.publish(connections);
+    this.publish();
   }
 
   async onClose(connection: Connection) {
     // The number of connections has changed, so let all subscribers know
-    // Deduct the current connection
-    const connections = this.connectionsCount();
-    await this.publish(connections - 1);
+    // Manually deduct the current connection (this will be refreshed in publish)
+    //this.connectionsCache = this.connectionsCount() - 1;
+    this.publish();
   }
 
   async subscribe(hashedUrl: string, connection: Connection) {
     // Check the cache. We'll only send this subscribe message if it's been more than an hour
     // since the last one
-    const cached = this.cache[hashedUrl];
+    const cached = this.subscriptionsCache[hashedUrl];
     if (
       cached &&
       new Date().getTime() - cached.subscribedAt.getTime() < 60 * 60 * 1000
@@ -136,7 +139,7 @@ export default class Connections implements PartyKitServer {
     const msg = (await response.json()) as any;
     const connections = (msg.type === "connections" && msg.connections) || 0;
     // Update the cache
-    this.cache[hashedUrl] = {
+    this.subscriptionsCache[hashedUrl] = {
       subscribedAt: new Date(),
       connections: connections,
     };
@@ -146,7 +149,9 @@ export default class Connections implements PartyKitServer {
     }
   }
 
-  async publish(connections: number) {
+  async _publish() {
+    const connections = this.connectionsCount();
+
     // Let all connections to this page know how many connections there are
     this.party.broadcast(
       JSON.stringify({
@@ -185,6 +190,8 @@ export default class Connections implements PartyKitServer {
     }
   }
 
+  publish = debounce(this._publish, 1000, false);
+
   async onRequest(req: Request, party: Party) {
     if (req.method === "GET") {
       // Return debug information
@@ -199,7 +206,7 @@ export default class Connections implements PartyKitServer {
             subscribers: serializable(subscribers),
             connections: this.connectionsCount(),
             hashedUrl: this.party.id,
-            cache: serializable(this.cache),
+            subscriptionsCache: serializable(this.subscriptionsCache),
           },
           null,
           2
@@ -232,9 +239,9 @@ export default class Connections implements PartyKitServer {
         // It's an update! Let all connections to this room know.
         // Also record it in the cache, if this is a subscriber we're interested in
         const { hashedUrl, connections } = msg as ConnectionsMessage;
-        if (this.cache[hashedUrl]) {
-          this.cache[hashedUrl] = {
-            ...this.cache[hashedUrl],
+        if (this.subscriptionsCache[hashedUrl]) {
+          this.subscriptionsCache[hashedUrl] = {
+            ...this.subscriptionsCache[hashedUrl],
             connections: connections,
           };
         }
