@@ -139,7 +139,10 @@ export class DiscoRoom {
     return (
       <Host>
         {this.connectionsCount > 0 && (
-          <div class="fixed right-2 bottom-2 rounded-full outline outline-1 outline-stone-400 text-xs text-stone-400 px-2 py-1 font-sans">
+          <div
+            class="fixed right-2 bottom-2 rounded-full outline outline-1 outline-stone-400 text-xs text-stone-400 px-2 py-1 font-sans"
+            title={this.roomId}
+          >
             Here: {this.connectionsCount}
           </div>
         )}

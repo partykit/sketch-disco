@@ -1,11 +1,11 @@
 import type {
   PartyKitServer,
-  PartyKitConnection,
-  PartyKitRoom,
-  PartyRequest,
+  Party,
+  Connection,
+  Request,
 } from "partykit/server";
 
-/* tracker
+/* hyperspace.ts
  * Room ID corresponds to hashed URL.
  * - tracks number of connections and lets all subscribed parties know
  * - re-broadcasts 'exit' messages
@@ -52,16 +52,14 @@ export default class Connections implements PartyKitServer {
     hibernate: true,
   };
 
-  constructor(public party: PartyKitRoom) {}
+  constructor(public party: Party) {}
 
   connectionsCount() {
-    return Array.from(this.party.connections).length;
+    // Length of this.party.getConnections() (a map)
+    return Array.from(this.party.getConnections()).length;
   }
 
-  async onMessage(
-    message: string | ArrayBuffer,
-    connection: PartyKitConnection
-  ) {
+  async onMessage(message: string | ArrayBuffer, connection: Connection) {
     const msg = JSON.parse(message as string);
     if (msg.type === "init") {
       const { hashedUrls } = msg as InitMessage;
@@ -74,24 +72,26 @@ export default class Connections implements PartyKitServer {
     }
   }
 
-  async onConnect(connection: PartyKitConnection) {
+  async onConnect(connection: Connection) {
     // The number of connections has changed, so let all subscribers know
     await this.publish();
   }
 
-  async onDisconnect(connection: PartyKitConnection) {
+  async onDisconnect(connection: Connection) {
     // The number of connections has changed, so let all subscribers know
     await this.publish();
   }
 
-  async subscribe(hashedUrl: string, connection: PartyKitConnection) {
-    const response = await this.party.parties.tracker.get(hashedUrl).fetch({
-      method: "POST",
-      body: JSON.stringify({
-        type: "subscribe",
-        hashedUrl: this.party.id,
-      }),
-    });
+  async subscribe(hashedUrl: string, connection: Connection) {
+    const response = await this.party.context.parties.hyperspace
+      .get(hashedUrl)
+      .fetch({
+        method: "POST",
+        body: JSON.stringify({
+          type: "subscribe",
+          hashedUrl: this.party.id,
+        }),
+      });
     // The response is probably a connections message
     const msg = (await response.json()) as any;
     if (msg.type === "connections") {
@@ -113,35 +113,66 @@ export default class Connections implements PartyKitServer {
     );
 
     // Let all subscribers know how many connections there are, too
-    const subscriptions = (await this.party.storage.get(
-      "subscriptions"
-    )) as Set<string>;
-    if (!subscriptions) return;
+    const subscribers: Map<string, string> = await this.party.storage.list();
+
+    // Prepare variables for the loop
+    const now = new Date();
     const msg = {
       type: "connections",
       hashedUrl: this.party.id,
       connections: connections,
     };
-    for (const hashedUrl of subscriptions) {
-      await this.party.parties.tracker.get(hashedUrl).fetch({
-        method: "POST",
-        body: JSON.stringify(msg),
-      });
+
+    for (const [storageKey, isoDate] of subscribers.entries()) {
+      if (!storageKey.startsWith("hashedUrl-")) {
+        // Skip non-subscriber keys
+        continue;
+      }
+      const hashedUrl = storageKey.slice("hashedUrl-".length);
+      if (now.getTime() - new Date(isoDate).getTime() > 24 * 60 * 60 * 1000) {
+        // If the subscription is older than 24 hours, expire it
+        await this.party.storage.delete(hashedUrl);
+      } else {
+        await this.party.context.parties.hyperspace.get(hashedUrl).fetch({
+          method: "POST",
+          body: JSON.stringify(msg),
+        });
+      }
     }
   }
 
-  async onRequest(req: PartyRequest, party: PartyKitRoom) {
-    if (req.method === "POST") {
+  async onRequest(req: Request, party: Party) {
+    if (req.method === "GET") {
+      // Return debug information
+      // In subscribers, only include keys that start with "hashedUrl-"
+      const storage: Map<string, unknown> = await this.party.storage.list();
+      const subscribers = new Map(
+        [...storage.entries()].filter(([key]) => key.startsWith("hashedUrl-"))
+      ) as Map<string, string>;
+      return new Response(
+        JSON.stringify(
+          {
+            subscribers: serializable(subscribers),
+            connections: this.connectionsCount(),
+            hashedUrl: this.party.id,
+          },
+          null,
+          2
+        )
+      );
+    } else if (req.method === "POST") {
       const msg = (await req.json()) as any;
       if (msg.type === "subscribe") {
         const { hashedUrl } = msg as SubscribeMessage;
-        // Register this in subscriptions
-        const subscriptions =
-          ((await this.party.storage.get("subscriptions")) as Set<string>) ||
-          new Set<string>();
-        subscriptions.add(hashedUrl);
-        await this.party.storage.put("subscriptions", subscriptions);
-        // Respond to the the new subscriber with how many connections there are currently
+        // Store this subscriber
+        // Subscribers are all stored as separate keys in room storage,
+        // together with the date of subscription. We do this because we don't want
+        // subscriptions to live forever: they should expire after 24 hours
+        await this.party.storage.put(
+          `hashedUrl-${hashedUrl}`,
+          new Date().toISOString()
+        );
+        // Respond to the the new subscriber with how many connections there are currently,
         return new Response(
           JSON.stringify({
             type: "connections",
@@ -160,5 +191,39 @@ export default class Connections implements PartyKitServer {
     }
 
     return new Response("Method not implemented", { status: 501 });
+  }
+}
+
+// A function that converts any value to a JSON serializable value. It calls itself recursively
+// Strings, numbers, booleans, and dates are passed through.
+// Arrays looked at element by element, recursively.
+// Maps and Sets are converted to arrays, and looked at element by element, recursively.
+function serializable(value: any): any {
+  if (typeof value === "string") {
+    return value;
+  } else if (typeof value === "number") {
+    return value;
+  } else if (typeof value === "boolean") {
+    return value;
+  } else if (value instanceof Date) {
+    return value;
+  } else if (Array.isArray(value)) {
+    return value.map((v) => serializable(v));
+  } else if (value instanceof Map) {
+    const obj = {};
+    Array.from(value.entries()).map(([k, v]) => {
+      obj[serializable(k)] = serializable(v);
+    });
+    return obj;
+  } else if (value instanceof Set) {
+    return Array.from(value).map((v) => serializable(v));
+  } else if (typeof value === "object") {
+    const obj = {};
+    for (const [k, v] of Object.entries(value)) {
+      obj[k] = serializable(v);
+    }
+    return obj;
+  } else {
+    return null;
   }
 }
