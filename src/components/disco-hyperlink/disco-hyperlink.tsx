@@ -40,7 +40,7 @@ function getDomPath(el) {
 export class DiscoHyperlink {
   @Element() hostEl: HTMLDivElement;
   @Prop() inUse: boolean = false;
-  @Prop() peepConnections: number = 0;
+  @Prop() peepConnections: string = "0";
   @State() domPath: string;
   @State() hashedUrl: string | null = null;
 
@@ -94,7 +94,7 @@ export class DiscoHyperlink {
           </div>
         )}
         {!this.inUse && <slot></slot>}
-        {this.peepConnections > 0 && (
+        {this.peepConnections !== "0" && (
           <span class="peep-connections">{this.peepConnections}</span>
         )}
       </Host>

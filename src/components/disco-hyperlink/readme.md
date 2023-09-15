@@ -10,7 +10,7 @@
 | Property          | Attribute          | Description | Type      | Default |
 | ----------------- | ------------------ | ----------- | --------- | ------- |
 | `inUse`           | `in-use`           |             | `boolean` | `false` |
-| `peepConnections` | `peep-connections` |             | `number`  | `0`     |
+| `peepConnections` | `peep-connections` |             | `string`  | `"0"`   |
 
 
 ## Events

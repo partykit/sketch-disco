@@ -4,6 +4,7 @@
     "persist": false,
     "parties": {
         "cursors": "partykit/cursors.ts",
-        "hyperspace": "partykit/hyperspace.ts"
+        "counter": "partykit/counter.ts",
+        "page": "partykit/page.ts"
     }
 }

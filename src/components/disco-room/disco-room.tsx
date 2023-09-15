@@ -8,10 +8,8 @@ import {
   Listen,
 } from "@stencil/core";
 import PartySocket from "partysocket";
-import {
-  type ExitMessage,
-  type RoomConnections,
-} from "../../../partykit/room-types";
+import { type ExitMessage } from "../../../partykit/room-types";
+import type { PageConnectionsSummary } from "../../../partykit/counter";
 import hash from "object-hash";
 
 @Component({
@@ -64,18 +62,8 @@ export class DiscoRoom {
     } else if (msg.type === "here") {
       this.connectionsCount = msg.connections;
       // @TODO emit an event to another component to display this
-    } else if (msg.type === "connections") {
-      // This is a message about another hashedUrl on this page
-      const { hashedUrl, connections } = msg;
-      // Find the disco-hyperlink element with the matching data-hashedUrl attribute, and set the peep-connections prop to the number of connections
-      const discoHyperlink = this.hostEl.querySelector(
-        `disco-hyperlink[data-hashedUrl="${hashedUrl}"]`
-      );
-      if (discoHyperlink) {
-        discoHyperlink.setAttribute("peep-connections", connections.toString());
-      }
     } else if (msg.type === "update") {
-      const roomConnections = msg.updates as RoomConnections;
+      const roomConnections = msg.connections as PageConnectionsSummary;
       // roomConnections is disco-hyperlink.hashedUrl => number of connections.
       // Iterate over all disco-hyperlink elements and set peep-connections to the number of connections,
       // or 0 if the room's hashedUrl is not in roomConnections
@@ -84,7 +72,7 @@ export class DiscoRoom {
       ) as NodeListOf<HTMLDiscoHyperlinkElement>;
       discoHyperlinks.forEach((discoHyperlink) => {
         const hashedUrl = discoHyperlink.getAttribute("data-hashedUrl");
-        if (hashedUrl && roomConnections[hashedUrl]) {
+        if (hashedUrl && hashedUrl in roomConnections) {
           discoHyperlink.setAttribute(
             "peep-connections",
             roomConnections[hashedUrl].toString()
@@ -113,7 +101,7 @@ export class DiscoRoom {
     // Connect to the partyserver for this specific room
     this.socket = new PartySocket({
       host: this.host,
-      party: "hyperspace",
+      party: "page",
       room: this.roomId,
     });
     this.socket.addEventListener("message", this.messageHandler);
@@ -128,8 +116,8 @@ export class DiscoRoom {
       ) || [];
 
     const msg = {
-      type: "init",
-      hashedUrls: hashedUrls,
+      type: "subscribe",
+      links: hashedUrls,
     };
     console.log("disco-room:componentDidLoad sending init", msg);
     this.socket.send(JSON.stringify(msg));
