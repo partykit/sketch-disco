@@ -48,25 +48,17 @@ export default class PageConnectionsServer implements Party.Server {
   }
 
   async onConnect(connection: Party.Connection, ctx: Party.ConnectionContext) {
+    const connections = [...this.party.getConnections()].length;
     // update all connections to this room with the new count
-    this.party.broadcast(
-      JSON.stringify({
-        type: "here",
-        connections: [...this.party.getConnections()].length,
-      })
-    );
+    this.party.broadcast(JSON.stringify({ type: "here", connections }));
     // when a client connects to this party, update the counter party
-    await this.sendConnectionCountUpdateToCounter(
-      [...this.party.getConnections()].length
-    );
+    await this.sendConnectionCountUpdateToCounter(connections);
   }
 
   onClose(connection: Party.Connection) {
-    const connections = [...this.party.getConnections()].length - 1;
+    const connections = [...this.party.getConnections()].length;
     // update all connections to this room with the new count
-    this.party.broadcast(
-      JSON.stringify({ type: "here", connections: connections })
-    );
+    this.party.broadcast(JSON.stringify({ type: "here", connections }));
     // when a client disconnects, update the counter party
     this.sendConnectionCountUpdateToCounter(connections);
   }
