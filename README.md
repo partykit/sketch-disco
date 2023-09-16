@@ -89,3 +89,4 @@ Optionally: to include only _some_ of the content inside the disco-room, wrap se
 - [ ] Add real-time shared text selection
 - [ ] In page.tsx, debounce connection change updates (these can change frequently and shouldn't be sent more than once every 500ms, but must send eventually)
 - [ ] In the partyserver, account for changes in a page's list of subscribed URLs (these can change up to daily)
+- [ ] Add debug views to page and counter to validate data

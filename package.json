@@ -29,8 +29,8 @@
     "@stencil/core": "^4.0.0",
     "debounce": "^1.2.1",
     "object-hash": "^3.0.0",
-    "partykit": "^0.0.0-be875c6",
-    "partysocket": "^0.0.0-be875c6"
+    "partykit": "^0.0.0-aa0fa3c",
+    "partysocket": "^0.0.0-aa0fa3c"
   },
   "devDependencies": {
     "@stencil/sass": "^3.0.5",
