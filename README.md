@@ -37,7 +37,7 @@ Then, in the \<head> of every page you want to use the components, add:
 Add the following to the \<head> of every page you want to use the components:
 
 ```html
-<script type="module" src="https://unpkg.com/disco-party@0.0.3"></script>
+<script type="module" src="https://unpkg.com/disco-party@0.1.0"></script>
 ```
 
 ### (3) Start the server
@@ -76,10 +76,6 @@ In your site template, wrap the content that you want to be part of the disco-ro
 (You may need to put `&nbsp;` in empty tags to stop pre-processors collapsing them.)
 
 Optionally: to include only _some_ of the content inside the disco-room, wrap sections in `<disco-include>` tags. If you don't do this, then the entire disco-room will be included.
-
-## Bugs
-
-- [x] When disco-room receives an 'update' message, it zeros the number of peep-connections for all container disco-hyperlinks. It should not, because update is used as a batch sync at the beginning, but also incremental updates.
 
 ## To do
 
