@@ -1,4 +1,4 @@
-import { Component, Host, Prop, State, h } from "@stencil/core";
+import { Component, Host, Prop, State, h, Listen } from "@stencil/core";
 import PartySocket from "partysocket";
 import { CursorsMap, Cursor, NotifyMessage } from "../../../partykit/cursors";
 import hash from "object-hash";
@@ -16,18 +16,40 @@ export class DiscoCursors {
     width: 0,
     height: 0,
   };
+  @State() scrollableHeight: number = 0;
   @State() cursors: CursorsMap = {};
+
+  @State() cursorXAbsolute: number = -1;
+  @State() cursorYAbsolute: number = -1;
+  @State() cursorYScroll: number = -1;
+
+  // notify the server of the mouse position
+  private doNotify = () => {
+    //if (!this.windowDimensions.width || !this.windowDimensions.height) return;
+    if (!this.windowDimensions.width || !this.scrollableHeight) return;
+    if (this.cursorXAbsolute < 0 || this.cursorYAbsolute < 0) return;
+    const notify = {
+      type: "notify",
+      x: Math.min(this.cursorXAbsolute / this.windowDimensions.width, 1.0),
+      y: Math.min(this.cursorYScroll / this.scrollableHeight, 1.0),
+      pointer: "mouse",
+    } as NotifyMessage;
+    //console.log("notify", this.cursorYScroll, this.scrollableHeight, notify);
+    this.socket.send(JSON.stringify(notify));
+  };
 
   // Always track the mouse position
   private onMouseMove = (e: MouseEvent) => {
-    if (!this.windowDimensions.width || !this.windowDimensions.height) return;
-    const notify = {
-      type: "notify",
-      x: e.clientX / this.windowDimensions.width,
-      y: e.clientY / this.windowDimensions.height,
-      pointer: "mouse",
-    } as NotifyMessage;
-    this.socket.send(JSON.stringify(notify));
+    this.cursorXAbsolute = e.clientX;
+    this.cursorYAbsolute = e.clientY;
+    this.cursorYScroll = e.pageY;
+    this.doNotify();
+  };
+
+  private onScroll = () => {
+    const currentScrollY = window.scrollY || document.documentElement.scrollTop;
+    this.cursorYScroll = this.cursorYAbsolute + currentScrollY;
+    this.doNotify();
   };
 
   private updateDimensions = () => {
@@ -35,6 +57,8 @@ export class DiscoCursors {
       width: window.innerWidth,
       height: window.innerHeight,
     };
+    this.scrollableHeight = document.documentElement.scrollHeight;
+    this.doNotify();
   };
 
   private messageHandler = async (e: MessageEvent) => {
@@ -76,12 +100,27 @@ export class DiscoCursors {
 
     // Set up a listener for window resize events
     window.addEventListener("resize", () => this.updateDimensions());
-    this.updateDimensions();
 
     // Listen to mouse events
     window.addEventListener("mousemove", (e) => this.onMouseMove(e));
 
+    // The pageY can change without the mouse moving
+    window.addEventListener("scroll", () => this.onScroll());
+
     // @TODO add listener for touch events
+
+    window.onload = function () {
+      console.log(
+        "cursors:window.onload",
+        document.documentElement.scrollHeight
+      );
+    };
+  }
+
+  @Listen("load", { target: "window" })
+  onLoad() {
+    console.log("cursors:onLoad", document.documentElement.scrollHeight);
+    this.updateDimensions();
   }
 
   private getFlagEmoji = (countryCode: string) => {
@@ -96,7 +135,19 @@ export class DiscoCursors {
     const fill = "#04f";
     const offset = 10;
     const x = cursor.x * this.windowDimensions.width - offset;
-    const y = cursor.y * this.windowDimensions.height - offset;
+    const absoluteY = cursor.y * this.scrollableHeight - offset;
+    const y =
+      absoluteY - (window.scrollY || document.documentElement.scrollTop);
+    /*console.log(
+      "y",
+      y,
+      absoluteY,
+      this.scrollableHeight,
+      window.scrollY,
+      document.documentElement.scrollTop
+    );*/
+    if (y < 0 || y > this.windowDimensions.height) return null;
+
     const flag = this.getFlagEmoji(cursor.country);
     const styles = {
       transform: `translate(${x}px, ${y}px)`,
@@ -135,7 +186,7 @@ export class DiscoCursors {
   render() {
     return (
       <Host>
-        <div class="absolute top-0 left-0 -z-10 opacity-50 w-full h-full overflow-clip">
+        <div class="fixed top-0 left-0 -z-10 opacity-50 w-full h-full overflow-clip">
           {Object.entries(this.cursors).map(([_, cursor]) => {
             return this.otherCursor(cursor);
           })}

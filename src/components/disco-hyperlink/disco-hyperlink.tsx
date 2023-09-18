@@ -71,16 +71,16 @@ export class DiscoHyperlink {
     this.hostEl.setAttribute("data-hashedUrl", this.hashedUrl);
     this.hostEl.setAttribute("data-domPath", this.domPath);
 
-    console.log(
+    /*console.log(
       "disco-hyperlink:componentWillLoad",
       href,
       this.domPath,
       this.hashedUrl
-    );
+    );*/
 
     // Listen for clicks on the <a> tag inside self, and emit discoHyperlinkExit
-    this.hostEl.querySelector("a").addEventListener("click", (e) => {
-      console.log("disco-hyperlink:click", e);
+    this.hostEl.querySelector("a").addEventListener("click", () => {
+      //console.log("disco-hyperlink:click", e);
       this.discoHyperlinkClick.emit(this.domPath);
     });
   }
