@@ -5,6 +5,7 @@
     "parties": {
         "cursors": "partykit/cursors.ts",
         "counter": "partykit/counter.ts",
-        "page": "partykit/page.ts"
+        "page": "partykit/page.ts",
+        "selections": "partykit/selections.ts"
     }
 }

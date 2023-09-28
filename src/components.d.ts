@@ -17,6 +17,7 @@ export namespace Components {
         "host": string;
     }
     interface DiscoSelect {
+        "host": string;
     }
 }
 export interface DiscoHyperlinkCustomEvent<T> extends CustomEvent<T> {
@@ -68,6 +69,7 @@ declare namespace LocalJSX {
         "host"?: string;
     }
     interface DiscoSelect {
+        "host"?: string;
     }
     interface IntrinsicElements {
         "disco-cursors": DiscoCursors;
