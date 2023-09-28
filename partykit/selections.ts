@@ -36,6 +36,12 @@ export default class SelectionsServer implements Party.Server {
         JSON.stringify({ type: "sync", selections: this.getSelections() }),
         [websocket.id]
       );
+    } else if (msg.type === "remove") {
+      this.selections.delete(websocket.id);
+      this.party.broadcast(
+        JSON.stringify({ type: "sync", selections: this.getSelections() }),
+        [websocket.id]
+      );
     }
   }
 

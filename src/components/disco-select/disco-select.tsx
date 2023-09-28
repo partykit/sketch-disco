@@ -8,8 +8,10 @@ import {
   State,
 } from "@stencil/core";
 import PartySocket from "partysocket";
-import * as rangy from "rangy";
+import "rangy/lib/rangy-classapplier";
 import "rangy/lib/rangy-serializer";
+import "rangy/lib/rangy-highlighter";
+import * as rangy from "rangy";
 
 @Component({
   tag: "disco-select",
@@ -22,6 +24,7 @@ export class DiscoSelect {
   @State() roomId: string;
   @State() socket: PartySocket;
   @State() selections: string[] = [];
+  @State() highlighter: rangy.Highlighter;
 
   isContained(selection) {
     const ranges = selection.getAllRanges();
@@ -39,6 +42,9 @@ export class DiscoSelect {
   @Listen("selectionchange", { target: "document" })
   selectionchangeHandler(event) {
     console.log("selectionchange", event);
+
+    if (!this.socket) return;
+
     const selection = rangy.getSelection();
     if (!selection.isCollapsed) {
       // Selection has been updated
@@ -49,29 +55,63 @@ export class DiscoSelect {
           this.hostEl
         );
         console.log("got a selection inside self", serialized);
-        if (this.socket) {
-          this.socket.send(
-            JSON.stringify({
-              type: "update",
-              selection: serialized,
-            })
-          );
-        }
+        this.socket.send(
+          JSON.stringify({
+            type: "update",
+            selection: serialized,
+          })
+        );
+        return;
       }
     }
+
+    // We have no selection, or it's outside of self
+    this.socket.send(JSON.stringify({ type: "remove" }));
   }
+
+  addHighlights = () => {
+    console.log("addHighlights", this.selections);
+
+    // Remove all highlights
+    this.highlighter.removeAllHighlights();
+
+    // Collect ranges
+    let ranges = [];
+    for (const serializedRanges of this.selections) {
+      for (const serializedRange of serializedRanges.split("|")) {
+        console.log("deserializing", serializedRange);
+        ranges = ranges.concat(
+          rangy.deserializeRange(serializedRange, this.hostEl)
+        );
+      }
+    }
+
+    if (ranges.length > 0) {
+      console.log("highlighting", ranges);
+      this.highlighter.highlightRanges("highlight", ranges);
+    }
+  };
 
   private messageHandler = async (e: MessageEvent) => {
     const msg = await JSON.parse(e.data);
     console.log("disco-select:messageHandler", msg);
     if (msg.type === "sync") {
       this.selections = msg.selections;
+      this.addHighlights();
     }
   };
 
   componentWillLoad() {
     this.roomId = rangy.getElementChecksum(this.hostEl);
     console.log("disco-select:componentWillLoad", this.roomId);
+
+    // Create the highlighter
+    const applier = rangy.createClassApplier("highlight", {
+      ignoreWhiteSpace: true,
+      tagNames: ["span", "a"],
+    });
+    this.highlighter = rangy.createHighlighter();
+    this.highlighter.addClassApplier(applier);
 
     // Connect to the partyserver for this specific room
     this.socket = new PartySocket({
@@ -85,6 +125,7 @@ export class DiscoSelect {
   render() {
     return (
       <Host>
+        <span class="highlight">xx</span>
         <slot></slot>
       </Host>
     );
