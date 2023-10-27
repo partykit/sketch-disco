@@ -1,4 +1,4 @@
-import { Component, Host, Prop, State, h, Listen } from "@stencil/core";
+import { Component, Host, Prop, State, h } from "@stencil/core";
 import PartySocket from "partysocket";
 import { CursorsMap, Cursor, NotifyMessage } from "../../../partykit/cursors";
 import hash from "object-hash";
@@ -58,6 +58,11 @@ export class DiscoCursors {
       height: window.innerHeight,
     };
     this.scrollableHeight = document.documentElement.scrollHeight;
+    /*console.log(
+      "updateDimensions",
+      this.windowDimensions,
+      this.scrollableHeight
+    );*/
     this.doNotify();
   };
 
@@ -108,18 +113,10 @@ export class DiscoCursors {
     window.addEventListener("scroll", () => this.onScroll());
 
     // @TODO add listener for touch events
-
-    window.onload = function () {
-      console.log(
-        "cursors:window.onload",
-        document.documentElement.scrollHeight
-      );
-    };
   }
 
-  @Listen("load", { target: "window" })
-  onLoad() {
-    console.log("cursors:onLoad", document.documentElement.scrollHeight);
+  componentDidLoad() {
+    //console.log("componentDidLoad", document.documentElement.scrollHeight);
     this.updateDimensions();
   }
 
