@@ -80,11 +80,11 @@ export class DiscoCursors {
       height: window.innerHeight,
     };
     this.scrollableHeight = document.documentElement.scrollHeight;
-    /*console.log(
+    console.log(
       "updateDimensions",
       this.windowDimensions,
       this.scrollableHeight
-    );*/
+    );
     this.doNotify();
   };
 
@@ -148,8 +148,7 @@ export class DiscoCursors {
     const fill = "#04f";
     const x = cursor.x * this.windowDimensions.width;
     const absoluteY = cursor.y * this.scrollableHeight;
-    const y =
-      absoluteY - (window.scrollY || document.documentElement.scrollTop);
+    //const y = absoluteY - (window.scrollY || document.documentElement.scrollTop);
     /*console.log(
       "y",
       y,
@@ -164,7 +163,7 @@ export class DiscoCursors {
       <OtherCursor
         fill={fill}
         x={x}
-        y={y}
+        y={absoluteY}
         pointer={cursor.pointer}
         country={cursor.country}
         message={null}
@@ -176,7 +175,7 @@ export class DiscoCursors {
   render() {
     return (
       <Host>
-        <div class="fixed top-0 left-0 -z-10 opacity-50 w-full h-full overflow-clip">
+        <div class="absolute top-0 left-0 -z-10 opacity-50 overflow-visible">
           {Object.entries(this.cursors).map(([_, cursor]) => {
             return this.otherCursor(cursor);
           })}
