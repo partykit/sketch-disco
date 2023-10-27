@@ -1,6 +1,6 @@
 {
   "name": "disco-party",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A handful of experimental PartyKit-backed web components for ambient presence",
   "main": "dist/index.cjs.js",
   "module": "dist/index.js",
@@ -31,8 +31,8 @@
     "i": "^0.3.7",
     "npm": "^10.1.0",
     "object-hash": "^3.0.0",
-    "partykit": "^0.0.0-aa0fa3c",
-    "partysocket": "^0.0.0-aa0fa3c",
+    "partykit": "^0.0.0-00bdda2",
+    "partysocket": "^0.0.0-00bdda2",
     "rangy": "^1.3.1"
   },
   "devDependencies": {
