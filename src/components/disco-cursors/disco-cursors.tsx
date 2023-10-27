@@ -1,6 +1,7 @@
 import { Component, Host, Prop, State, h } from "@stencil/core";
 import PartySocket from "partysocket";
 import { CursorsMap, Cursor, NotifyMessage } from "../../../partykit/cursors";
+import OtherCursor from "./other-cursor";
 import hash from "object-hash";
 
 @Component({
@@ -22,6 +23,7 @@ export class DiscoCursors {
   @State() cursorXAbsolute: number = -1;
   @State() cursorYAbsolute: number = -1;
   @State() cursorYScroll: number = -1;
+  @State() cursorPointer: string = "mouse";
 
   // notify the server of the mouse position
   private doNotify = () => {
@@ -32,17 +34,37 @@ export class DiscoCursors {
       type: "notify",
       x: Math.min(this.cursorXAbsolute / this.windowDimensions.width, 1.0),
       y: Math.min(this.cursorYScroll / this.scrollableHeight, 1.0),
-      pointer: "mouse",
+      pointer: this.cursorPointer,
     } as NotifyMessage;
     //console.log("notify", this.cursorYScroll, this.scrollableHeight, notify);
     this.socket.send(JSON.stringify(notify));
   };
 
-  // Always track the mouse position
+  // Respond to mouse events
   private onMouseMove = (e: MouseEvent) => {
     this.cursorXAbsolute = e.clientX;
     this.cursorYAbsolute = e.clientY;
     this.cursorYScroll = e.pageY;
+    this.cursorPointer = "mouse";
+    this.doNotify();
+  };
+
+  // Respond to touch events
+  private onTouchMove = (e: TouchEvent) => {
+    const touch = e.touches[0];
+    this.cursorXAbsolute = touch.clientX;
+    this.cursorYAbsolute = touch.clientY;
+    this.cursorYScroll = touch.pageY;
+    this.cursorPointer = "touch";
+    this.doNotify();
+  };
+
+  // Respond to touches ending
+  private onTouchEnd = () => {
+    this.cursorXAbsolute = -1;
+    this.cursorYAbsolute = -1;
+    this.cursorYScroll = -1;
+    this.cursorPointer = "touch";
     this.doNotify();
   };
 
@@ -96,7 +118,7 @@ export class DiscoCursors {
     this.socket = new PartySocket({
       host: this.host,
       party: "cursors",
-      room: hash(window.location.href),
+      room: hash(window.location.href.split("?")[0]),
     });
 
     this.socket.addEventListener("message", async (e) =>
@@ -106,13 +128,15 @@ export class DiscoCursors {
     // Set up a listener for window resize events
     window.addEventListener("resize", () => this.updateDimensions());
 
-    // Listen to mouse events
-    window.addEventListener("mousemove", (e) => this.onMouseMove(e));
-
     // The pageY can change without the mouse moving
     window.addEventListener("scroll", () => this.onScroll());
 
-    // @TODO add listener for touch events
+    // Listen to mouse events
+    window.addEventListener("mousemove", (e) => this.onMouseMove(e));
+
+    // Listen for touch events
+    window.addEventListener("touchmove", (e) => this.onTouchMove(e));
+    window.addEventListener("touchend", () => this.onTouchEnd());
   }
 
   componentDidLoad() {
@@ -120,19 +144,10 @@ export class DiscoCursors {
     this.updateDimensions();
   }
 
-  private getFlagEmoji = (countryCode: string) => {
-    const codePoints = countryCode
-      .toUpperCase()
-      .split("")
-      .map((char) => 127397 + char.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
-  };
-
   private otherCursor = (cursor: Cursor) => {
     const fill = "#04f";
-    const offset = 10;
-    const x = cursor.x * this.windowDimensions.width - offset;
-    const absoluteY = cursor.y * this.scrollableHeight - offset;
+    const x = cursor.x * this.windowDimensions.width;
+    const absoluteY = cursor.y * this.scrollableHeight;
     const y =
       absoluteY - (window.scrollY || document.documentElement.scrollTop);
     /*console.log(
@@ -143,40 +158,18 @@ export class DiscoCursors {
       window.scrollY,
       document.documentElement.scrollTop
     );*/
-    if (y < 0 || y > this.windowDimensions.height) return null;
-
-    const flag = this.getFlagEmoji(cursor.country);
-    const styles = {
-      transform: `translate(${x}px, ${y}px)`,
-      filter: "blur(1px)",
-    };
+    //if (y < -30 || y > this.windowDimensions.height + 30) return null;
 
     return (
-      <div class="absolute" style={styles}>
-        <svg
-          height="32"
-          viewBox="0 0 32 32"
-          width="32"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <g fill="none" fill-rule="evenodd" transform="translate(10 7)">
-            <path
-              d="m6.148 18.473 1.863-1.003 1.615-.839-2.568-4.816h4.332l-11.379-11.408v16.015l3.316-3.221z"
-              fill="#fff"
-            />
-            <path
-              d="m6.431 17 1.765-.941-2.775-5.202h3.604l-8.025-8.043v11.188l2.53-2.442z"
-              fill={fill}
-            />
-          </g>
-        </svg>
-        <div
-          class="absolute text-2xl whitespace-nowrap p-1"
-          style={{ top: "10px", left: "16px" }}
-        >
-          {flag}
-        </div>
-      </div>
+      <OtherCursor
+        fill={fill}
+        x={x}
+        y={y}
+        pointer={cursor.pointer}
+        country={cursor.country}
+        message={null}
+        styles={{ filer: "blur(1px)" }}
+      />
     );
   };
 
