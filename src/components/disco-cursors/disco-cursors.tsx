@@ -80,11 +80,11 @@ export class DiscoCursors {
       height: window.innerHeight,
     };
     this.scrollableHeight = document.documentElement.scrollHeight;
-    console.log(
+    /*console.log(
       "updateDimensions",
       this.windowDimensions,
       this.scrollableHeight
-    );
+    );*/
     this.doNotify();
   };
 
@@ -167,7 +167,7 @@ export class DiscoCursors {
         pointer={cursor.pointer}
         country={cursor.country}
         message={null}
-        styles={{ filer: "blur(1px)" }}
+        styles={{ filter: "blur(1px)" }}
       />
     );
   };
