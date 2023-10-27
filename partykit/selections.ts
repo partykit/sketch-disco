@@ -19,11 +19,18 @@ export default class SelectionsServer implements Party.Server {
   constructor(public party: Party.Party) {}
 
   getSelections() {
-    return Array.from(this.selections.values());
+    // Convert map to plain object
+    const selections: Record<string, string> = {};
+    this.selections.forEach((value, key) => {
+      selections[key] = value;
+    });
+    return selections;
   }
 
   onConnect(connection: Party.Connection) {
-    connection.send(
+    // Get all selection values except for when the key is connection.id
+    // Don't use getSelections
+    const selections = connection.send(
       JSON.stringify({ type: "sync", selections: this.getSelections() })
     );
   }
@@ -48,7 +55,7 @@ export default class SelectionsServer implements Party.Server {
   onClose(connection: Party.Connection) {
     this.selections.delete(connection.id);
     this.party.broadcast(
-      JSON.stringify({ type: "sync", selections: this.getSelections() })
+      JSON.stringify({ type: "sync", selections: this.selections })
     );
   }
 }

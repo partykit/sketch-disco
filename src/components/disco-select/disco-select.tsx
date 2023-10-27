@@ -1,3 +1,49 @@
+/*
+
+NOTES
+
+- changing the highlights in a paragraph kills the selection
+    - so... avoid changing the highlights in a para with a selection
+- a selection does not serialize correctly when highlights are present in the paragraph
+
+
+- it is possible to fetch highlights for a give para. it is possible to destroy those highlights
+- it would be possible to avoid drawing highlights that overlap with the current selection
+
+
+
+
+selectionOverlapsHighlight
+getHighlightsInSelection
+
+it is possible to highlight the selection with a different classname
+
+
+
+
+
+process:
+
+when a new update comes in
+
+- remove all highlights that don't share a para with selection
+- add highlights that don't share a para with selection
+
+when selection is removed
+
+- completed refresh highlights
+
+when selection is changed
+
+- remove highlights that share a para
+
+
+
+
+
+
+*/
+
 import {
   Component,
   Host,
@@ -8,6 +54,7 @@ import {
   State,
 } from "@stencil/core";
 import PartySocket from "partysocket";
+import "rangy/lib/rangy-textrange";
 import "rangy/lib/rangy-classapplier";
 import "rangy/lib/rangy-serializer";
 import "rangy/lib/rangy-highlighter";
@@ -23,8 +70,9 @@ export class DiscoSelect {
   @Prop() host: string;
   @State() roomId: string;
   @State() socket: PartySocket;
-  @State() selections: string[] = [];
+  @State() highlights: string[] = [];
   @State() highlighter: rangy.Highlighter;
+  @State() currentSelection: string;
 
   isContained(selection) {
     const ranges = selection.getAllRanges();
@@ -44,21 +92,24 @@ export class DiscoSelect {
     console.log("selectionchange", event);
 
     if (!this.socket) return;
-
     const selection = rangy.getSelection();
+
     if (!selection.isCollapsed) {
       // Selection has been updated
       if (this.isContained(selection)) {
-        const serialized = rangy.serializeSelection(
+        //const highlights = this.highlighter.serialize();
+        //this.highlighter.removeAllHighlights();
+        this.currentSelection = rangy.serializeSelection(
           selection,
           true, // omitChecksum: we're using the roomId for this
           this.hostEl
         );
-        console.log("got a selection inside self", serialized);
+        //this.highlighter.deserialize(highlights);
+        console.log("got a selection inside self", this.currentSelection);
         this.socket.send(
           JSON.stringify({
             type: "update",
-            selection: serialized,
+            selection: this.currentSelection,
           })
         );
         return;
@@ -69,15 +120,17 @@ export class DiscoSelect {
     this.socket.send(JSON.stringify({ type: "remove" }));
   }
 
-  addHighlights = () => {
-    console.log("addHighlights", this.selections);
-
-    // Remove all highlights
+  removeHighlights = () => {
+    console.log("removeHighlights");
     this.highlighter.removeAllHighlights();
+  };
+
+  addHighlights = () => {
+    console.log("addHighlights", this.highlights);
 
     // Collect ranges
     let ranges = [];
-    for (const serializedRanges of this.selections) {
+    for (const serializedRanges of this.highlights) {
       for (const serializedRange of serializedRanges.split("|")) {
         console.log("deserializing", serializedRange);
         ranges = ranges.concat(
@@ -88,7 +141,10 @@ export class DiscoSelect {
 
     if (ranges.length > 0) {
       console.log("highlighting", ranges);
-      this.highlighter.highlightRanges("highlight", ranges);
+      this.highlighter.highlightRanges("highlight", ranges, {
+        containerElement: this.hostEl,
+        exclusive: false,
+      });
     }
   };
 
@@ -96,7 +152,13 @@ export class DiscoSelect {
     const msg = await JSON.parse(e.data);
     console.log("disco-select:messageHandler", msg);
     if (msg.type === "sync") {
-      this.selections = msg.selections;
+      // msg.selections is a Map of connection.id => serialized selection
+      // we only want the values, and we want to omit our own connection
+      const syncMsg = msg as { type: "sync"; selections: Map<string, string> };
+      this.highlights = Array.from(Object.entries(syncMsg.selections))
+        .filter(([id]) => id !== this.socket.id)
+        .map(([_, value]) => value);
+      this.removeHighlights();
       this.addHighlights();
     }
   };
@@ -104,13 +166,18 @@ export class DiscoSelect {
   componentWillLoad() {
     this.roomId = rangy.getElementChecksum(this.hostEl);
     console.log("disco-select:componentWillLoad", this.roomId);
+    // If hostEl doesn't have an id, add the roomId as an id
+    // id is required internally by rangy.highlighter
+    if (!this.hostEl.id) {
+      this.hostEl.id = this.roomId;
+    }
 
     // Create the highlighter
     const applier = rangy.createClassApplier("highlight", {
       ignoreWhiteSpace: true,
       tagNames: ["span", "a"],
     });
-    this.highlighter = rangy.createHighlighter();
+    this.highlighter = rangy.createHighlighter(document, "TextRange");
     this.highlighter.addClassApplier(applier);
 
     // Connect to the partyserver for this specific room
@@ -125,7 +192,6 @@ export class DiscoSelect {
   render() {
     return (
       <Host>
-        <span class="highlight">xx</span>
         <slot></slot>
       </Host>
     );
