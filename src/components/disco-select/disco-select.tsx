@@ -71,7 +71,6 @@ export class DiscoSelect {
   @State() roomId: string;
   @State() socket: PartySocket;
   @State() highlights: string[] = [];
-  @State() highlighter: rangy.Highlighter;
   @State() currentSelection: string;
 
   isContained(selection) {
@@ -97,14 +96,11 @@ export class DiscoSelect {
     if (!selection.isCollapsed) {
       // Selection has been updated
       if (this.isContained(selection)) {
-        //const highlights = this.highlighter.serialize();
-        //this.highlighter.removeAllHighlights();
         this.currentSelection = rangy.serializeSelection(
           selection,
           true, // omitChecksum: we're using the roomId for this
           this.hostEl
         );
-        //this.highlighter.deserialize(highlights);
         console.log("got a selection inside self", this.currentSelection);
         this.socket.send(
           JSON.stringify({
@@ -122,7 +118,8 @@ export class DiscoSelect {
 
   removeHighlights = () => {
     console.log("removeHighlights");
-    this.highlighter.removeAllHighlights();
+    // @ts-ignore
+    CSS.highlights.clear();
   };
 
   addHighlights = () => {
@@ -130,6 +127,7 @@ export class DiscoSelect {
 
     // Collect ranges
     let ranges = [];
+    rangy.config.preferTextRange = true;
     for (const serializedRanges of this.highlights) {
       for (const serializedRange of serializedRanges.split("|")) {
         console.log("deserializing", serializedRange);
@@ -141,10 +139,10 @@ export class DiscoSelect {
 
     if (ranges.length > 0) {
       console.log("highlighting", ranges);
-      this.highlighter.highlightRanges("highlight", ranges, {
-        containerElement: this.hostEl,
-        exclusive: false,
-      });
+      // @ts-ignore
+      const highlight = new Highlight(...ranges.map((r) => r.nativeRange));
+      // @ts-ignore
+      CSS.highlights.set("disco-select", highlight);
     }
   };
 
@@ -171,14 +169,6 @@ export class DiscoSelect {
     if (!this.hostEl.id) {
       this.hostEl.id = this.roomId;
     }
-
-    // Create the highlighter
-    const applier = rangy.createClassApplier("highlight", {
-      ignoreWhiteSpace: true,
-      tagNames: ["span", "a"],
-    });
-    this.highlighter = rangy.createHighlighter(document, "TextRange");
-    this.highlighter.addClassApplier(applier);
 
     // Connect to the partyserver for this specific room
     this.socket = new PartySocket({

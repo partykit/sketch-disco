@@ -2,3 +2,7 @@
   display: block;
   position: relative;
 }
+
+::highlight(disco-select) {
+  background-color: yellow;
+}
